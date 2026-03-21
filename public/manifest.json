@@ -5,12 +5,13 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F2F2F7",
-  "theme_color": "#007AFF",
+  "theme_color": "#7C3AED",
   "orientation": "portrait-primary",
+  "categories": ["education", "music"],
   "icons": [
     {
       "src": "/icon",
-      "sizes": "any",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
@@ -18,7 +19,21 @@
       "src": "/apple-icon",
       "sizes": "180x180",
       "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/api/icon-512",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/api/icon-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

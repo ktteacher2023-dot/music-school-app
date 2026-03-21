@@ -3,6 +3,7 @@ import { M_PLUS_Rounded_1c } from 'next/font/google';
 import './globals.css';
 import SwRegister from '@/components/SwRegister';
 import BottomNav from '@/components/BottomNav';
+import InstallPrompt from '@/components/InstallPrompt';
 
 const mplus = M_PLUS_Rounded_1c({
   weight: ['400', '500', '700', '800'],
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: '練習ノート',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 };
 
@@ -43,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <BottomNav />
+        <InstallPrompt />
       </body>
     </html>
   );
