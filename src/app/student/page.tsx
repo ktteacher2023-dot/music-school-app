@@ -19,6 +19,7 @@ import { uploadStudentAvatar, fetchTeacherAvatarFromSupabase } from '@/lib/avata
 import { supabase } from '@/lib/supabase';
 import MusicQuizGame from '@/components/MusicQuizGame';
 import MelodyQuizGame from '@/components/MelodyQuizGame';
+import { fetchLessonRecords, type LessonRecord } from '@/lib/lessonRecords';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -1306,6 +1307,10 @@ export default function StudentPage() {
   // melody quiz game
   const [showMelodyGame,     setShowMelodyGame]     = useState(false);
   const [melodyPlayedToday,  setMelodyPlayedToday]  = useState(false);
+  // treasure videos (teacher lesson records)
+  const [treasureRecs,     setTreasureRecs]     = useState<LessonRecord[]>([]);
+  const [loadingTreasure,  setLoadingTreasure]  = useState(false);
+  const [treasureLoaded,   setTreasureLoaded]   = useState(false);
 
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
@@ -1367,6 +1372,17 @@ export default function StudentPage() {
       }, () => {});
     }
   }, [load, router]);
+
+  const loadTreasureRecs = useCallback(async () => {
+    if (treasureLoaded) return;
+    const p = getProfile();
+    if (!p) return;
+    setLoadingTreasure(true);
+    const recs = await fetchLessonRecords(p.nickname, p.birthday);
+    setTreasureRecs(recs);
+    setLoadingTreasure(false);
+    setTreasureLoaded(true);
+  }, [treasureLoaded]);
 
   const theme   = getTheme(charType);
   const creatures = theme.creatures;
@@ -2303,6 +2319,149 @@ export default function StudentPage() {
             </div>
           </div>
         )}
+
+        {/* ── Treasure videos (teacher lesson records) ── */}
+        {mounted && (
+          <div className="rounded-2xl overflow-hidden"
+            style={isPrincess ? {
+              background: 'linear-gradient(135deg,rgba(255,240,255,0.82),rgba(220,180,255,0.6))',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(199,125,255,0.35)',
+              boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
+            } : {
+              background: 'rgba(5,10,28,0.97)',
+              border: '1px solid rgba(0,200,255,0.2)',
+              boxShadow: '0 4px 24px rgba(0,200,255,0.08)',
+            }}>
+
+            {/* Section header */}
+            <button
+              className="w-full text-left px-4 py-3 flex items-center gap-3"
+              onClick={loadTreasureRecs}
+              style={{ borderBottom: treasureLoaded
+                ? isPrincess ? '1px solid rgba(199,125,255,0.2)' : '1px solid rgba(0,200,255,0.12)'
+                : 'none' }}>
+              <span className="text-2xl leading-none">{isPrincess ? '🎀' : '📼'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-sm"
+                  style={{ color: isPrincess ? '#7B1FA2' : '#00C6FF' }}>
+                  {isPrincess ? '✦ 魔法の思い出シアター' : '▸ MISSION ARCHIVE'}
+                </p>
+                <p className="text-[10px]"
+                  style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(0,200,255,0.45)' }}>
+                  {isPrincess ? '先生からの宝物ビデオを見よう！' : '先生が記録した任務映像アーカイブ'}
+                </p>
+              </div>
+              {!treasureLoaded && (
+                <span className="text-[10px] font-black px-2 py-1 rounded-full"
+                  style={isPrincess ? {
+                    background: 'rgba(199,125,255,0.15)',
+                    color: '#C77DFF',
+                    border: '1px solid rgba(199,125,255,0.3)',
+                  } : {
+                    background: 'rgba(0,200,255,0.08)',
+                    color: '#00C6FF',
+                    border: '1px solid rgba(0,200,255,0.25)',
+                  }}>
+                  {isPrincess ? '見る ✦' : '開く ▶'}
+                </span>
+              )}
+            </button>
+
+            {treasureLoaded && (
+              <div className="px-4 py-3 space-y-4">
+                {loadingTreasure ? (
+                  <div className="flex items-center justify-center py-6 gap-2">
+                    <div className="animate-spin text-lg">{isPrincess ? '✨' : '⭐'}</div>
+                    <span className="text-xs" style={{ color: isPrincess ? '#C77DFF' : '#00C6FF' }}>読み込み中…</span>
+                  </div>
+                ) : treasureRecs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 gap-2">
+                    <span className="text-3xl">{isPrincess ? '📷' : '📭'}</span>
+                    <p className="text-xs font-semibold"
+                      style={{ color: isPrincess ? '#AB47BC' : '#00C6FF' }}>
+                      {isPrincess ? 'まだ宝物ビデオがないよ' : 'アーカイブはまだ空だ'}
+                    </p>
+                    <p className="text-[10px]"
+                      style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(0,200,255,0.4)' }}>
+                      {isPrincess ? '先生がレッスン後に追加してくれるよ！' : 'ミッション完了後に先生が記録を残す'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-[19px] top-5 bottom-5 w-px"
+                      style={{ background: isPrincess
+                        ? 'linear-gradient(to bottom,rgba(199,125,255,0.4),rgba(199,125,255,0.05))'
+                        : 'linear-gradient(to bottom,rgba(0,200,255,0.35),rgba(0,200,255,0.05))' }}/>
+
+                    {treasureRecs.map((rec) => {
+                      const d = new Date(rec.recorded_at);
+                      const label = `${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+                      return (
+                        <div key={rec.id} className="flex gap-3">
+                          {/* Timeline dot */}
+                          <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
+                            style={isPrincess ? {
+                              background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)',
+                              boxShadow: '0 0 12px rgba(199,125,255,0.5)',
+                            } : {
+                              background: 'linear-gradient(135deg,#0066FF,#00C6FF)',
+                              boxShadow: '0 0 12px rgba(0,200,255,0.4)',
+                            }}>
+                            <span className="text-sm leading-none">{isPrincess ? '✦' : '▶'}</span>
+                          </div>
+
+                          {/* Card */}
+                          <div className="flex-1 min-w-0 rounded-2xl overflow-hidden"
+                            style={isPrincess ? {
+                              background: 'rgba(255,255,255,0.75)',
+                              backdropFilter: 'blur(12px)',
+                              border: '1px solid rgba(199,125,255,0.25)',
+                            } : {
+                              background: 'rgba(10,6,30,0.97)',
+                              border: '1px solid rgba(0,200,255,0.2)',
+                            }}>
+
+                            <div className="px-3 py-2 border-b"
+                              style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.15)' : 'rgba(0,200,255,0.1)' }}>
+                              <p className="text-xs font-black"
+                                style={{ color: isPrincess ? '#9B4DCA' : '#00C6FF' }}>
+                                {isPrincess ? `✦ ${label}` : `▸ ${label}`}
+                              </p>
+                            </div>
+
+                            {rec.teacher_memo && (
+                              <div className="px-3 py-2.5">
+                                <p className="text-sm leading-relaxed"
+                                  style={{ color: isPrincess ? '#3d004d' : 'rgba(255,255,255,0.85)' }}>
+                                  {rec.teacher_memo}
+                                </p>
+                              </div>
+                            )}
+
+                            {rec.video_url && (
+                              <div className="px-3 pb-3">
+                                <video
+                                  src={rec.video_url}
+                                  controls
+                                  playsInline
+                                  preload="metadata"
+                                  className="w-full rounded-xl bg-black max-h-64 object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

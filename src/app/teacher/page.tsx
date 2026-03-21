@@ -11,6 +11,10 @@ import AvatarUploader from '@/components/AvatarUploader';
 import { uploadTeacherAvatar, getTeacherAvatarUrl } from '@/lib/avatar';
 import type { MonsterState } from '@/app/student/page';
 import StarRating from '@/components/StarRating';
+import {
+  fetchLessonRecords, saveLessonRecord, uploadLessonVideo, deleteLessonRecord,
+  type LessonRecord,
+} from '@/lib/lessonRecords';
 
 const ROLE_KEY      = 'app_role';
 const MS_KEY        = 'monster_state_v2';
@@ -527,6 +531,64 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const [saved,   setSaved]   = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(true);
 
+  // ── Lesson records (video + memo) ──────────────────────────────────────────
+  const [records,       setRecords]       = useState<LessonRecord[]>([]);
+  const [loadingRecs,   setLoadingRecs]   = useState(true);
+  const [recMemo,       setRecMemo]       = useState('');
+  const [recVideoFile,  setRecVideoFile]  = useState<File | null>(null);
+  const [recVideoPreview, setRecVideoPreview] = useState<string | null>(null);
+  const [savingRec,     setSavingRec]     = useState(false);
+  const [savedRec,      setSavedRec]      = useState(false);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchLessonRecords(profile.nickname, profile.birthday).then(recs => {
+      setRecords(recs);
+      setLoadingRecs(false);
+    });
+  }, [profile.nickname, profile.birthday]);
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRecVideoFile(file);
+    setRecVideoPreview(URL.createObjectURL(file));
+  };
+
+  const handleSaveRecord = async () => {
+    setSavingRec(true);
+    let videoUrl: string | null = null;
+    if (recVideoFile) {
+      videoUrl = await uploadLessonVideo(recVideoFile, profile.nickname);
+    }
+    const saved = await saveLessonRecord(
+      profile.nickname, profile.birthday, recMemo, videoUrl,
+    );
+    if (saved) {
+      setRecords(prev => [saved, ...prev]);
+      setRecMemo('');
+      setRecVideoFile(null);
+      setRecVideoPreview(null);
+      if (videoInputRef.current) videoInputRef.current.value = '';
+    }
+    setSavingRec(false);
+    setSavedRec(true);
+    setTimeout(() => setSavedRec(false), 2500);
+  };
+
+  const handleDeleteRecord = async (rec: LessonRecord) => {
+    setDeletingId(rec.id);
+    await deleteLessonRecord(rec.id, rec.video_url, profile.nickname);
+    setRecords(prev => prev.filter(r => r.id !== rec.id));
+    setDeletingId(null);
+  };
+
+  const fmtRecDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+  };
+
   useEffect(() => {
     async function loadNotes() {
       if (supabase) {
@@ -836,6 +898,234 @@ function StudentDetailModal({ profile, stats, onClose }: {
               {saving ? (isPrincess ? '✦ 保存中…' : '書き込み中…') : (isPrincess ? '✦ 日誌を保存する' : '▸ レッスン記録を保存')}
             </button>
           </div>
+        </div>
+
+        {/* ── Video record uploader ── */}
+        <div className="rounded-2xl overflow-hidden"
+          style={isPrincess ? {
+            background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(199,125,255,0.35)',
+            boxShadow: '0 4px 20px rgba(199,125,255,0.12)',
+          } : {
+            background: 'rgba(10,6,30,0.97)',
+            border: '1px solid rgba(0,200,255,0.25)',
+          }}>
+
+          {/* Header */}
+          <div className="px-4 py-3 border-b"
+            style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(0,200,255,0.15)' }}>
+            <p className="font-black text-sm"
+              style={{ color: isPrincess ? '#7B1FA2' : '#00C6FF' }}>
+              {isPrincess ? '🎬 今日の演奏を記録する' : '📹 ミッション記録映像を保存'}
+            </p>
+            <p className="text-[10px] mt-0.5"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(0,200,255,0.5)' }}>
+              {isPrincess ? 'メモ＋動画をセットで宝物アルバムに残せるよ' : 'テキストログと映像アーカイブを記録せよ'}
+            </p>
+          </div>
+
+          <div className="px-4 py-3 space-y-3">
+            {/* Memo input */}
+            <textarea
+              rows={3}
+              value={recMemo}
+              onChange={e => setRecMemo(e.target.value)}
+              placeholder={isPrincess
+                ? '今日のレッスンメモ…（例：左手のリズムが安定してきた！）✦'
+                : '今日の分析ログを入力…（例：テンポ制御に改善あり）'}
+              className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none leading-relaxed"
+              style={isPrincess ? {
+                background: 'rgba(255,240,255,0.8)',
+                color: '#3d004d',
+                border: '1px solid rgba(199,125,255,0.35)',
+              } : {
+                background: 'rgba(0,200,255,0.06)',
+                color: 'white',
+                border: '1px solid rgba(0,200,255,0.2)',
+              }}
+            />
+
+            {/* Video select button */}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleVideoSelect}
+            />
+            <button
+              onClick={() => videoInputRef.current?.click()}
+              className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              style={isPrincess ? {
+                background: 'rgba(199,125,255,0.12)',
+                color: '#9B4DCA',
+                border: '1.5px dashed rgba(199,125,255,0.5)',
+              } : {
+                background: 'rgba(0,200,255,0.08)',
+                color: '#00C6FF',
+                border: '1.5px dashed rgba(0,200,255,0.35)',
+              }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+              </svg>
+              {recVideoFile ? recVideoFile.name : (isPrincess ? '✦ 演奏動画を選ぶ（カメラ or ライブラリ）' : '▸ 映像ファイルを選択')}
+            </button>
+
+            {/* Video preview */}
+            {recVideoPreview && (
+              <div className="relative rounded-xl overflow-hidden bg-black">
+                <video src={recVideoPreview} controls playsInline
+                  className="w-full max-h-48 object-contain" />
+                <button
+                  onClick={() => { setRecVideoFile(null); setRecVideoPreview(null); if (videoInputRef.current) videoInputRef.current.value = ''; }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {savedRec && (
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2 animate-pop-in"
+                style={isPrincess
+                  ? { background:'rgba(199,125,255,0.12)', border:'1px solid rgba(199,125,255,0.25)' }
+                  : { background:'rgba(0,200,255,0.08)', border:'1px solid rgba(0,200,255,0.2)' }}>
+                <span className="text-base">{isPrincess ? '✨' : '✓'}</span>
+                <span className="text-xs font-bold"
+                  style={{ color: isPrincess ? '#C77DFF' : '#00C6FF' }}>
+                  {isPrincess ? '宝物アルバムに追加しました！' : 'アーカイブに記録しました！'}
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveRecord}
+              disabled={savingRec || (!recMemo.trim() && !recVideoFile)}
+              className="w-full py-3 rounded-xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-40"
+              style={isPrincess ? {
+                background: 'linear-gradient(90deg,#C77DFF,#FF6B9D)',
+                color: 'white',
+                boxShadow: '0 4px 16px rgba(199,125,255,0.4)',
+              } : {
+                background: 'linear-gradient(90deg,#0066FF,#00C6FF)',
+                color: 'white',
+                boxShadow: '0 4px 16px rgba(0,200,255,0.35)',
+              }}>
+              {savingRec
+                ? (isPrincess ? '✦ 保存中…' : '送信中…')
+                : (isPrincess ? '✦ 宝物アルバムに保存する' : '▸ アーカイブに記録する')}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Past records timeline ── */}
+        <div>
+          <p className="text-[11px] font-black tracking-[0.22em] uppercase mb-3 px-1"
+            style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(0,200,255,0.5)' }}>
+            {isPrincess ? '✦ 宝物アルバム' : '▸ MISSION ARCHIVE'}
+          </p>
+
+          {loadingRecs ? (
+            <div className="flex items-center justify-center py-6 gap-2">
+              <div className="animate-spin text-lg">{isPrincess ? '✨' : '⭐'}</div>
+              <span className="text-xs" style={{ color: isPrincess ? '#C77DFF' : '#00C6FF' }}>読み込み中…</span>
+            </div>
+          ) : records.length === 0 ? (
+            <div className="rounded-2xl flex flex-col items-center justify-center py-8 gap-2"
+              style={isPrincess ? {
+                background: 'rgba(255,255,255,0.4)',
+                border: '1.5px dashed rgba(199,125,255,0.3)',
+              } : {
+                background: 'rgba(0,200,255,0.04)',
+                border: '1.5px dashed rgba(0,200,255,0.2)',
+              }}>
+              <span className="text-2xl">{isPrincess ? '📷' : '📼'}</span>
+              <p className="text-xs font-semibold"
+                style={{ color: isPrincess ? '#AB47BC' : '#00C6FF' }}>
+                {isPrincess ? 'まだ記録がありません' : 'アーカイブは空です'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 relative">
+              {/* Timeline line */}
+              <div className="absolute left-[19px] top-5 bottom-5 w-px"
+                style={{ background: isPrincess
+                  ? 'linear-gradient(to bottom,rgba(199,125,255,0.4),rgba(199,125,255,0.05))'
+                  : 'linear-gradient(to bottom,rgba(0,200,255,0.35),rgba(0,200,255,0.05))' }}/>
+
+              {records.map((rec) => (
+                <div key={rec.id} className="flex gap-3">
+                  {/* Timeline dot */}
+                  <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
+                    style={isPrincess ? {
+                      background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)',
+                      boxShadow: '0 0 12px rgba(199,125,255,0.5)',
+                    } : {
+                      background: 'linear-gradient(135deg,#0066FF,#00C6FF)',
+                      boxShadow: '0 0 12px rgba(0,200,255,0.4)',
+                    }}>
+                    <span className="text-base leading-none">{isPrincess ? '✦' : '▶'}</span>
+                  </div>
+
+                  {/* Card */}
+                  <div className="flex-1 min-w-0 rounded-2xl overflow-hidden"
+                    style={isPrincess ? {
+                      background: 'rgba(255,255,255,0.75)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(199,125,255,0.25)',
+                    } : {
+                      background: 'rgba(10,6,30,0.97)',
+                      border: '1px solid rgba(0,200,255,0.2)',
+                    }}>
+
+                    {/* Date header */}
+                    <div className="flex items-center justify-between px-3 py-2 border-b"
+                      style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.15)' : 'rgba(0,200,255,0.1)' }}>
+                      <span className="text-xs font-black"
+                        style={{ color: isPrincess ? '#9B4DCA' : '#00C6FF' }}>
+                        {fmtRecDate(rec.recorded_at)}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteRecord(rec)}
+                        disabled={deletingId === rec.id}
+                        className="w-6 h-6 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 active:opacity-60 transition-opacity disabled:opacity-30">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                          stroke={isPrincess ? '#9B4DCA' : '#FF3B30'} strokeWidth="2.5" strokeLinecap="round">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Memo */}
+                    {rec.teacher_memo && (
+                      <div className="px-3 py-2">
+                        <p className="text-sm leading-relaxed"
+                          style={{ color: isPrincess ? '#3d004d' : 'rgba(255,255,255,0.85)' }}>
+                          {rec.teacher_memo}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Video */}
+                    {rec.video_url && (
+                      <div className="px-3 pb-3">
+                        <video
+                          src={rec.video_url}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full rounded-xl bg-black max-h-56 object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
