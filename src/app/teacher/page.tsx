@@ -6,6 +6,7 @@ import { getSubmissions, updateSubmission } from '@/lib/submissions';
 import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
 import { awardBadge, hasBadge } from '@/lib/badges';
+import { supabase } from '@/lib/supabase';
 import type { MonsterState } from '@/app/student/page';
 import StarRating from '@/components/StarRating';
 
@@ -75,6 +76,7 @@ export default function TeacherPage() {
   const [xpGranted,       setXpGranted]       = useState(false);
   const [expressionGranted, setExpressionGranted] = useState(false);
   const [expressionAlready, setExpressionAlready] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -130,6 +132,26 @@ export default function TeacherPage() {
     } else {
       setExpressionAlready(true);
     }
+  };
+
+  const handleDeleteStudent = async () => {
+    const STUDENT_KEYS = [
+      'student_profile_v1', 'monster_state_v2', 'last_attack_date',
+      'badge_celebrated', 'music_practice_records', 'practice_submissions_v1',
+    ];
+    STUDENT_KEYS.forEach(k => localStorage.removeItem(k));
+    if (supabase && profile) {
+      try {
+        await supabase.from('profiles').delete()
+          .match({ nickname: profile.nickname, birthday: profile.birthday });
+      } catch (e) {
+        console.warn('[supabase] delete failed:', e);
+      }
+    }
+    setProfile(null);
+    setStats(null);
+    setSubs([]);
+    setShowDeleteConfirm(false);
   };
 
   const handleBonusXp = () => {
@@ -190,6 +212,13 @@ export default function TeacherPage() {
         {mounted && (
           <section>
             <SectionLabel>生徒のステータス</SectionLabel>
+            {!profile ? (
+              <div className="bg-white rounded-2xl shadow-sm flex flex-col items-center justify-center py-10 gap-2">
+                <span className="text-3xl">👤</span>
+                <p className="text-sm font-semibold text-[#1C1C1E]">生徒が登録されていません</p>
+                <p className="text-xs text-[#8E8E93]">生徒がアプリでプロフィールを作成すると表示されます</p>
+              </div>
+            ) : (
             <div className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all
               ${isWarning ? 'ring-2 ring-[#FF3B30]/50' : ''}`}>
 
@@ -275,7 +304,7 @@ export default function TeacherPage() {
                 </div>
               )}
 
-              {/* Bonus XP + Award buttons */}
+              {/* Bonus XP + Award buttons + Delete */}
               <div className="px-4 pb-3 space-y-2">
                 <button onClick={handleBonusXp}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#5856D6] to-[#007AFF] text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
@@ -317,9 +346,28 @@ export default function TeacherPage() {
                     </span>
                   </div>
                 )}
+
+                {/* Delete student */}
+                <button onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full py-2.5 rounded-xl border border-[#FF3B30]/40 text-[#FF3B30] text-sm font-bold active:bg-[#FF3B30]/10 transition-all flex items-center justify-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                  生徒のデータを削除する
+                </button>
               </div>
             </div>
+            )}
           </section>
+        )}
+
+        {/* Delete confirm dialog */}
+        {showDeleteConfirm && profile && (
+          <ConfirmDeleteDialog
+            nickname={profile.nickname}
+            onConfirm={handleDeleteStudent}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
         )}
 
         {/* ── 3. QUICK REPLY STAMPS ── */}
@@ -391,6 +439,40 @@ export default function TeacherPage() {
           )}
         </section>
 
+      </div>
+    </div>
+  );
+}
+
+// ─── Confirm delete dialog ─────────────────────────────────────────────────────
+function ConfirmDeleteDialog({ nickname, onConfirm, onCancel }: {
+  nickname: string; onConfirm: () => void; onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-6"
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-[#FF3B30]/10 flex items-center justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-[17px] font-black text-[#1C1C1E]">
+            本当に <span className="text-[#FF3B30]">{nickname}</span> のデータを削除しますか？
+          </p>
+          <p className="text-xs text-[#8E8E93]">練習記録・バッジ・ゲームデータがすべて消えます。元に戻せません。</p>
+        </div>
+        <div className="flex gap-3 w-full">
+          <button onClick={onCancel}
+            className="flex-1 py-3 rounded-2xl bg-[#F2F2F7] text-[#1C1C1E] text-sm font-bold active:bg-[#E5E5EA]">
+            キャンセル
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 py-3 rounded-2xl bg-[#FF3B30] text-white text-sm font-bold active:opacity-80 shadow-sm">
+            削除する
+          </button>
+        </div>
       </div>
     </div>
   );
