@@ -524,13 +524,6 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const lv          = calcLevel(stats?.totalXp ?? 0);
   const title       = getTitle(lv);
   const cur         = MONSTERS[(stats?.monsterIndex ?? 0) % MONSTERS.length];
-  const NOTES_KEY   = `lesson_notes_${profile.nickname}`;
-
-  const [notes,   setNotes]   = useState('');
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [loadingNotes, setLoadingNotes] = useState(true);
-
   // ── Lesson records (video + memo) ──────────────────────────────────────────
   const [records,       setRecords]       = useState<LessonRecord[]>([]);
   const [loadingRecs,   setLoadingRecs]   = useState(true);
@@ -606,45 +599,6 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const fmtRecDate = (iso: string) => {
     const d = new Date(iso);
     return `${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
-  };
-
-  useEffect(() => {
-    async function loadNotes() {
-      if (supabase) {
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('lesson_notes')
-            .match({ nickname: profile.nickname, birthday: profile.birthday })
-            .maybeSingle();
-          if (data?.lesson_notes) {
-            setNotes(data.lesson_notes);
-            localStorage.setItem(NOTES_KEY, data.lesson_notes);
-            setLoadingNotes(false);
-            return;
-          }
-        } catch (e) { console.warn('[notes] load failed:', e); }
-      }
-      setNotes(localStorage.getItem(NOTES_KEY) ?? '');
-      setLoadingNotes(false);
-    }
-    loadNotes();
-  }, [NOTES_KEY, profile.birthday, profile.nickname]);
-
-  const handleSaveNotes = async () => {
-    setSaving(true);
-    localStorage.setItem(NOTES_KEY, notes);
-    localStorage.setItem(`lesson_notes_updated_at_${profile.nickname}`, Date.now().toString());
-    if (supabase) {
-      try {
-        await supabase.from('profiles')
-          .update({ lesson_notes: notes })
-          .match({ nickname: profile.nickname, birthday: profile.birthday });
-      } catch (e) { console.warn('[notes] save failed:', e); }
-    }
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   };
 
   const fmtBirthday = (s: string) => {
@@ -839,107 +793,28 @@ function StudentDetailModal({ profile, stats, onClose }: {
           </div>
         </div>
 
-        {/* ── Lesson notes ── */}
-        <div className="rounded-2xl overflow-hidden"
-          style={isPrincess ? {
-            background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255,215,0,0.35)',
-            boxShadow: '0 4px 20px rgba(199,125,255,0.12)',
-          } : {
-            background: 'rgba(10,6,30,0.97)',
-            border: '1px solid rgba(255,107,0,0.25)',
-          }}>
-          <div className="px-4 py-3 border-b"
-            style={{ borderColor: isPrincess ? 'rgba(255,215,0,0.2)' : 'rgba(255,107,0,0.15)' }}>
-            <p className="font-black text-sm"
-              style={{ color: isPrincess ? '#7B1FA2' : '#FF9F0A' }}>
-              {isPrincess ? '✦ 魔法の日誌 — レッスン記録' : '▸ LESSON LOG'}
-            </p>
-            <p className="text-[10px] mt-0.5"
-              style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,255,255,0.3)' }}>
-              {isPrincess ? '今日のレッスンで気づいたことを書いてね' : '今日のレッスン記録を入力'}
-            </p>
-          </div>
-
-          <div className="px-4 py-3 space-y-2">
-            {loadingNotes ? (
-              <div className="flex items-center justify-center py-4 gap-2">
-                <div className="animate-spin text-lg">{isPrincess ? '✨' : '⭐'}</div>
-                <span className="text-xs" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>読み込み中…</span>
-              </div>
-            ) : (
-              <textarea
-                rows={6}
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder={isPrincess
-                  ? 'スタッカートが上手になってきた！手首の力が抜けてきた気がする…✦'
-                  : '今日はリズムの練習を重点的に。左手の動きがだいぶ安定してきた。'}
-                className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none leading-relaxed"
-                style={isPrincess ? {
-                  background: 'rgba(255,240,255,0.8)',
-                  color: '#3d004d',
-                  border: '1px solid rgba(199,125,255,0.35)',
-                } : {
-                  background: 'rgba(255,255,255,0.07)',
-                  color: 'white',
-                  border: '1px solid rgba(255,107,0,0.2)',
-                }}
-              />
-            )}
-
-            {saved && (
-              <div className="flex items-center gap-2 rounded-xl px-3 py-2 animate-pop-in"
-                style={isPrincess
-                  ? { background:'rgba(199,125,255,0.12)', border:'1px solid rgba(199,125,255,0.25)' }
-                  : { background:'rgba(52,199,89,0.1)', border:'1px solid rgba(52,199,89,0.2)' }}>
-                <span className="text-base">{isPrincess ? '✨' : '✓'}</span>
-                <span className="text-xs font-bold"
-                  style={{ color: isPrincess ? '#C77DFF' : '#34C759' }}>
-                  {isPrincess ? '日誌を保存しました！' : 'レッスン記録を保存しました！'}
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={handleSaveNotes}
-              disabled={saving || loadingNotes}
-              className="w-full py-3 rounded-xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-50"
-              style={isPrincess ? {
-                background: 'linear-gradient(90deg,#FF6B9D,#C77DFF)',
-                color: 'white',
-                boxShadow: '0 4px 16px rgba(199,125,255,0.35)',
-              } : {
-                background: 'linear-gradient(90deg,#FF6B00,#FFD700)',
-                color: '#1a0030',
-                boxShadow: '0 4px 16px rgba(255,107,0,0.35)',
-              }}>
-              {saving ? (isPrincess ? '✦ 保存中…' : '書き込み中…') : (isPrincess ? '✦ 日誌を保存する' : '▸ レッスン記録を保存')}
-            </button>
-          </div>
-        </div>
-
         {/* ── Video record uploader ── */}
         <div className="rounded-2xl overflow-hidden"
           style={isPrincess ? {
             background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)',
             border: '1px solid rgba(199,125,255,0.35)',
-            boxShadow: '0 4px 20px rgba(199,125,255,0.12)',
+            boxShadow: '0 4px 20px rgba(199,125,255,0.15)',
           } : {
             background: 'rgba(10,6,30,0.97)',
-            border: '1px solid rgba(0,200,255,0.25)',
+            border: '1px solid rgba(0,200,255,0.3)',
+            boxShadow: '0 4px 24px rgba(0,200,255,0.1)',
           }}>
 
           {/* Header */}
-          <div className="px-4 py-3 border-b"
+          <div className="px-4 py-4 border-b"
             style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(0,200,255,0.15)' }}>
-            <p className="font-black text-sm"
+            <p className="font-black text-base"
               style={{ color: isPrincess ? '#7B1FA2' : '#00C6FF' }}>
-              {isPrincess ? '🎬 今日の演奏を記録する' : '📹 ミッション記録映像を保存'}
+              {isPrincess ? '✨ 成長の魔法アーカイブ' : '🎸 伝説のレッスン記録'}
             </p>
-            <p className="text-[10px] mt-0.5"
+            <p className="text-[11px] mt-0.5"
               style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(0,200,255,0.5)' }}>
-              {isPrincess ? 'メモ＋動画をセットで宝物アルバムに残せるよ' : 'テキストログと映像アーカイブを記録せよ'}
+              {isPrincess ? '動画＋メモで成長の軌跡を永遠に残そう ✦' : '映像と記録でレジェンドを刻め ▸'}
             </p>
           </div>
 
@@ -1105,7 +980,7 @@ function StudentDetailModal({ profile, stats, onClose }: {
         <div>
           <p className="text-[11px] font-black tracking-[0.22em] uppercase mb-3 px-1"
             style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(0,200,255,0.5)' }}>
-            {isPrincess ? '✦ 宝物アルバム' : '▸ MISSION ARCHIVE'}
+            {isPrincess ? '✦ これまでの魔法アーカイブ' : '▸ LEGEND ARCHIVE'}
           </p>
 
           {loadingRecs ? (
