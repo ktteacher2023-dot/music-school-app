@@ -1306,9 +1306,10 @@ export default function StudentPage() {
   // melody quiz game
   const [showMelodyGame, setShowMelodyGame] = useState(false);
   // ── game-played flags: computed fresh every render from localStorage ──────
-  // Keys are student-scoped to prevent one student's play blocking another on shared devices
-  const musicGameKey  = nickname ? `${MUSIC_GAME_KEY}_${nickname}`  : MUSIC_GAME_KEY;
-  const melodyGameKey = nickname ? `${MELODY_GAME_KEY}_${nickname}` : MELODY_GAME_KEY;
+  // Always scoped to student. Even with empty nickname this gives 'music_quiz_last_played_'
+  // which is distinct from the legacy unscoped key and avoids stale-data collisions.
+  const musicGameKey  = `${MUSIC_GAME_KEY}_${nickname}`;
+  const melodyGameKey = `${MELODY_GAME_KEY}_${nickname}`;
   // Using state as a tick counter so handlers can force a re-render after writing localStorage
   const [gameTick, setGameTick] = useState(0);
   const gamePlayedToday   = mounted ? localStorage.getItem(musicGameKey)  === today : false;
@@ -1345,13 +1346,15 @@ export default function StudentPage() {
     // Debug: log date comparison values so timezone issues can be spotted in DevTools
     const dbgToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
     const dbgNick  = p.nickname ?? '';
-    const dbgMusicKey  = dbgNick ? `${MUSIC_GAME_KEY}_${dbgNick}`  : MUSIC_GAME_KEY;
-    const dbgMelodyKey = dbgNick ? `${MELODY_GAME_KEY}_${dbgNick}` : MELODY_GAME_KEY;
+    const dbgMusicKey  = `${MUSIC_GAME_KEY}_${dbgNick}`;
+    const dbgMelodyKey = `${MELODY_GAME_KEY}_${dbgNick}`;
     console.log(
       '[GameDebug] today(JST):', dbgToday,
-      '| music_stored:', localStorage.getItem(dbgMusicKey),
-      '| melody_stored:', localStorage.getItem(dbgMelodyKey),
+      '| charType:', p.type,
       '| nick:', dbgNick,
+      '| musicKey:', dbgMusicKey, '=', localStorage.getItem(dbgMusicKey),
+      '| melodyKey:', dbgMelodyKey, '=', localStorage.getItem(dbgMelodyKey),
+      '| legacy_unscoped:', localStorage.getItem(MUSIC_GAME_KEY),
     );
     // gamePlayedToday / melodyPlayedToday are now computed directly from localStorage each render
     // Load current badges; if expression badge was just awarded by teacher, celebrate
@@ -1509,6 +1512,11 @@ export default function StudentPage() {
 
     setSong(''); setMins(''); setRating(3); setVideoFile(null);
     localStorage.setItem(LAST_ATTACK_KEY, today); setLastAttackDate(today);
+    // Force re-render so gamePlayedToday/melodyPlayedToday re-read localStorage with correct scoped keys
+    setGameTick(t => t + 1);
+    console.log('[GameDebug] practice submitted — today(JST):', today,
+      '| musicKey:', musicGameKey, '=', localStorage.getItem(musicGameKey),
+      '| melodyKey:', melodyGameKey, '=', localStorage.getItem(melodyGameKey));
   };
 
   // Music quiz game: award EXP and close

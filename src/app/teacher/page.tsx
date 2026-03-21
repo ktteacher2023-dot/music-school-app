@@ -187,13 +187,13 @@ export default function TeacherPage() {
 
   const handleResetGameState = () => {
     const nick = profile?.nickname ?? '';
-    // Clear both old (device-scoped) and new (student-scoped) game keys
+    // Clear legacy unscoped key, empty-suffix fallback, and current student-scoped keys
     localStorage.removeItem(MUSIC_GAME_KEY);
     localStorage.removeItem(MELODY_GAME_KEY);
-    if (nick) {
-      localStorage.removeItem(`${MUSIC_GAME_KEY}_${nick}`);
-      localStorage.removeItem(`${MELODY_GAME_KEY}_${nick}`);
-    }
+    localStorage.removeItem(`${MUSIC_GAME_KEY}_`);
+    localStorage.removeItem(`${MELODY_GAME_KEY}_`);
+    localStorage.removeItem(`${MUSIC_GAME_KEY}_${nick}`);
+    localStorage.removeItem(`${MELODY_GAME_KEY}_${nick}`);
     // Also reset last_game_at in Supabase so cross-device sync is clean
     if (supabase && profile) {
       supabase.from('profiles')
