@@ -565,26 +565,27 @@ function StudentDetailModal({ profile, stats, onClose }: {
     // 1. Upload video if selected
     let videoUrl: string | null = null;
     if (recVideoFile) {
-      videoUrl = await uploadLessonVideo(recVideoFile, profile.nickname);
-      if (!videoUrl) {
-        setRecError('動画のアップロードに失敗しました。Storageバケット「lesson-records」が存在するか確認してください。');
+      const { url, error: upErr } = await uploadLessonVideo(recVideoFile, profile.nickname);
+      if (upErr || !url) {
+        setRecError(upErr ?? '動画アップロード失敗');
         setSavingRec(false);
         return;
       }
+      videoUrl = url;
     }
 
     // 2. Save record to DB
-    const saved = await saveLessonRecord(
+    const { record: saved, error: dbErr } = await saveLessonRecord(
       profile.nickname, profile.birthday, recMemo, videoUrl,
     );
     setSavingRec(false);
 
-    if (!saved) {
-      setRecError('DBへの保存に失敗しました。lesson_recordsテーブルが作成されているか確認してください。');
+    if (dbErr || !saved) {
+      setRecError(dbErr ?? 'DB保存失敗');
       return;
     }
 
-    // 3. Success — update list and clear form
+    // 3. Success — prepend to list and clear form
     setRecords(prev => [saved, ...prev]);
     setRecMemo('');
     setRecVideoFile(null);
