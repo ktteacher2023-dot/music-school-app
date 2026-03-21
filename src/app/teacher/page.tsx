@@ -81,7 +81,8 @@ export default function TeacherPage() {
   const [expressionAlready, setExpressionAlready] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
-  const [showSettings,     setShowSettings]      = useState(false);
+  const [showSettings,      setShowSettings]      = useState(false);
+  const [showStudentDetail, setShowStudentDetail] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -185,6 +186,15 @@ export default function TeacherPage() {
         <PasswordChangeSheet onClose={() => setShowSettings(false)} />
       )}
 
+      {/* ── Student detail modal ── */}
+      {showStudentDetail && profile && (
+        <StudentDetailModal
+          profile={profile}
+          stats={stats}
+          onClose={() => setShowStudentDetail(false)}
+        />
+      )}
+
       {/* ── Header ── */}
       <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-10 border-b border-[#C6C6C8]/60"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -256,6 +266,22 @@ export default function TeacherPage() {
             ) : (
             <div className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all
               ${isWarning ? 'ring-2 ring-[#FF3B30]/50' : ''}`}>
+
+              {/* Detail page tap area */}
+              <button className="w-full text-left active:bg-[#F2F2F7] transition-colors"
+                onClick={() => setShowStudentDetail(true)}>
+                <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
+                  <span className="text-[11px] font-black tracking-widest uppercase text-[#8E8E93]">
+                    生徒プロフィール
+                  </span>
+                  <div className="flex items-center gap-1 text-[#007AFF]">
+                    <span className="text-[11px] font-semibold">詳細を見る</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </div>
+                </div>
+              </button>
 
               {/* Warning banner */}
               {isWarning && (
@@ -480,6 +506,336 @@ export default function TeacherPage() {
             </div>
           )}
         </section>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Student detail modal ──────────────────────────────────────────────────────
+function StudentDetailModal({ profile, stats, onClose }: {
+  profile: Profile; stats: MonsterState | null; onClose: () => void;
+}) {
+  const isPrincess  = profile.type === 'princess';
+  const lv          = calcLevel(stats?.totalXp ?? 0);
+  const title       = getTitle(lv);
+  const cur         = MONSTERS[(stats?.monsterIndex ?? 0) % MONSTERS.length];
+  const NOTES_KEY   = `lesson_notes_${profile.nickname}`;
+
+  const [notes,   setNotes]   = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [loadingNotes, setLoadingNotes] = useState(true);
+
+  useEffect(() => {
+    async function loadNotes() {
+      if (supabase) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('lesson_notes')
+            .match({ nickname: profile.nickname, birthday: profile.birthday })
+            .maybeSingle();
+          if (data?.lesson_notes) {
+            setNotes(data.lesson_notes);
+            localStorage.setItem(NOTES_KEY, data.lesson_notes);
+            setLoadingNotes(false);
+            return;
+          }
+        } catch (e) { console.warn('[notes] load failed:', e); }
+      }
+      setNotes(localStorage.getItem(NOTES_KEY) ?? '');
+      setLoadingNotes(false);
+    }
+    loadNotes();
+  }, [NOTES_KEY, profile.birthday, profile.nickname]);
+
+  const handleSaveNotes = async () => {
+    setSaving(true);
+    localStorage.setItem(NOTES_KEY, notes);
+    if (supabase) {
+      try {
+        await supabase.from('profiles')
+          .update({ lesson_notes: notes })
+          .match({ nickname: profile.nickname, birthday: profile.birthday });
+      } catch (e) { console.warn('[notes] save failed:', e); }
+    }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const fmtBirthday = (s: string) => {
+    const d = new Date(s + 'T00:00:00');
+    return { y: `${d.getFullYear()}年`, md: `${d.getMonth()+1}月${d.getDate()}日`, w: '日月火水木金土'[d.getDay()] };
+  };
+  const bd = fmtBirthday(profile.birthday);
+
+  const bg     = isPrincess ? 'linear-gradient(180deg,#FFF0FF 0%,#F0E8FF 100%)' : 'linear-gradient(180deg,#080c18 0%,#0a0e20 100%)';
+  const hdrBg  = isPrincess ? 'rgba(255,240,255,0.92)' : 'rgba(8,12,28,0.95)';
+  const hdrBdr = isPrincess ? '1px solid rgba(255,100,180,0.25)' : '1px solid rgba(255,180,0,0.18)';
+  const accent = isPrincess ? '#C77DFF' : '#FF9F0A';
+
+  return (
+    <div className="fixed inset-0 z-[200] overflow-y-auto" style={{ background: bg }}>
+
+      {/* Decorative background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        {isPrincess ? (
+          <>
+            {[...Array(10)].map((_, i) => (
+              <div key={i} style={{
+                position:'absolute',
+                left:`${5+i*9}%`, top:`${5+((i*37)%80)}%`,
+                fontSize: 10+(i%3)*5, color:['#FFD700','#C77DFF','#87CEEB','#FFB7C5'][i%4],
+                animation:`twinkle ${2+i*0.3}s ${i*0.18}s ease-in-out infinite`,
+              }}>✦</div>
+            ))}
+            <div style={{ position:'absolute', top:'-10%', right:'-10%', width:300, height:300, borderRadius:'50%',
+              background:'radial-gradient(circle,rgba(199,125,255,0.12) 0%,transparent 70%)' }}/>
+            <div style={{ position:'absolute', bottom:'-10%', left:'-10%', width:260, height:260, borderRadius:'50%',
+              background:'radial-gradient(circle,rgba(135,206,235,0.10) 0%,transparent 70%)' }}/>
+          </>
+        ) : (
+          <>
+            <svg width="260" height="220" style={{ position:'absolute', top:-40, right:-50, opacity:0.12 }} aria-hidden>
+              <path d="M220,36 Q244,100 200,150 Q165,187 120,166 Q62,143 80,88 Q98,34 164,15 Q205,3 220,36Z" fill="#FF6B00"/>
+            </svg>
+            <svg width="240" height="280" style={{ position:'absolute', bottom:-50, left:-40, opacity:0.12 }} aria-hidden>
+              <path d="M38,182 Q16,126 55,70 Q82,24 135,44 Q192,64 180,130 Q170,194 124,218 Q76,240 38,182Z" fill="#7B00FF"/>
+            </svg>
+          </>
+        )}
+      </div>
+
+      {/* Header */}
+      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
+        style={{ paddingTop:'env(safe-area-inset-top)', background:hdrBg, backdropFilter:'blur(24px)', borderBottom:hdrBdr }}>
+        <button onClick={onClose}
+          className="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
+          style={{ background: isPrincess ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke={isPrincess ? '#9B4DCA' : '#FF9F0A'} strokeWidth="2.5" strokeLinecap="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black tracking-[0.22em] uppercase"
+            style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,107,0,0.6)' }}>
+            {isPrincess ? '✦ STUDENT JOURNAL ✦' : '▸ PLAYER CARD ◂'}
+          </p>
+          <h2 className="font-black text-xl leading-tight truncate"
+            style={{ color: isPrincess ? '#7B1FA2' : 'white' }}>
+            {profile.nickname}
+          </h2>
+        </div>
+        <span className="text-2xl leading-none">{isPrincess ? '📖' : '📋'}</span>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 px-4 pt-5 pb-16 space-y-4">
+
+        {/* ── Avatar + main stats card ── */}
+        <div className="rounded-3xl overflow-hidden relative"
+          style={isPrincess ? {
+            background: 'linear-gradient(135deg,rgba(255,255,255,0.28),rgba(220,180,255,0.18))',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,215,0,0.4)',
+            boxShadow: '0 8px 32px rgba(199,125,255,0.2)',
+          } : {
+            background: 'linear-gradient(135deg,rgba(10,6,30,0.97),rgba(20,10,50,0.97))',
+            border: '1px solid rgba(255,107,0,0.35)',
+            boxShadow: '0 4px 32px rgba(255,107,0,0.15)',
+          }}>
+          {/* Shimmer */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute inset-y-0 w-1/4 skew-x-12 animate-shimmer"
+              style={{ background: isPrincess ? 'rgba(255,255,255,0.12)' : 'rgba(255,107,0,0.05)' }}/>
+          </div>
+          {/* Princess corner sparkles */}
+          {isPrincess && [{top:8,left:10,c:'#FFD700',d:'0s'},{top:8,right:10,c:'#C77DFF',d:'0.4s'},{bottom:8,left:10,c:'#87CEEB',d:'0.8s'},{bottom:8,right:10,c:'#FFB7C5',d:'0.6s'}].map((s,i)=>(
+            <span key={i} className="absolute select-none text-sm pointer-events-none"
+              style={{ ...s, color:s.c, animation:`twinkle 2.2s ${s.d} ease-in-out infinite` }}>✦</span>
+          ))}
+
+          <div className="relative px-5 py-5 flex items-center gap-4">
+            {/* Avatar */}
+            <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0"
+              style={isPrincess ? {
+                border: '2.5px solid rgba(255,215,0,0.6)',
+                boxShadow: '0 0 20px rgba(199,125,255,0.4)',
+                background: `linear-gradient(135deg,${cur.from}66,${cur.to}66)`,
+              } : {
+                border: '2.5px solid rgba(255,107,0,0.55)',
+                boxShadow: '0 0 20px rgba(255,107,0,0.35)',
+                background: `linear-gradient(135deg,${cur.from},${cur.to})`,
+              }}>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover"/>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-3xl">
+                  {isPrincess ? '🌸' : cur.emoji}
+                </div>
+              )}
+            </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black tracking-widest uppercase"
+                style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,107,0,0.6)' }}>
+                {isPrincess ? 'プリンセス ✦' : 'KNIGHT ⚔️'}
+              </p>
+              <p className="font-black text-2xl leading-tight"
+                style={isPrincess ? {
+                  background:'linear-gradient(90deg,#FFD700,#C77DFF,#87CEEB)',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+                } : {
+                  color:'white', textShadow:'0 0 20px rgba(255,107,0,0.7)',
+                }}>
+                {profile.nickname}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs font-black px-2 py-0.5 rounded-full"
+                  style={isPrincess
+                    ? { background:'rgba(199,125,255,0.2)', color:'#C77DFF', border:'1px solid rgba(199,125,255,0.4)' }
+                    : { background:'rgba(255,107,0,0.2)', color:'#FF9F0A', border:'1px solid rgba(255,107,0,0.4)' }}>
+                  Lv.{lv}
+                </span>
+                <span className="text-xs font-bold" style={{ color: title.color }}>
+                  {title.icon} {title.title}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Stats grid ── */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon:'⭐', val: stats?.totalXp?.toLocaleString() ?? '0', unit:'XP', label:'累計経験値' },
+            { icon:'🔥', val: stats?.streak ?? 0, unit:'日', label:'連続練習' },
+            { icon:'⚔️', val: stats?.monstersDefeated ?? 0, unit:'体', label:'撃破数' },
+          ].map(s => (
+            <div key={s.label} className="rounded-2xl px-2 py-3 flex flex-col items-center gap-0.5"
+              style={isPrincess ? {
+                background:'rgba(255,255,255,0.7)', backdropFilter:'blur(12px)',
+                border:'1px solid rgba(199,125,255,0.25)', boxShadow:'0 2px 12px rgba(199,125,255,0.1)',
+              } : {
+                background:'rgba(10,6,30,0.9)',
+                border:'1px solid rgba(255,107,0,0.2)',
+              }}>
+              <span className="text-xl leading-none">{s.icon}</span>
+              <div className="flex items-baseline gap-0.5 mt-0.5">
+                <span className="text-[22px] font-black leading-none" style={{ color: accent }}>{s.val}</span>
+                <span className="text-[10px] font-bold" style={{ color: isPrincess ? '#AB47BC' : 'rgba(255,255,255,0.4)' }}>{s.unit}</span>
+              </div>
+              <p className="text-[9px] font-bold text-center" style={{ color: isPrincess ? '#9E6DA0' : 'rgba(255,255,255,0.3)' }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Birthday card ── */}
+        <div className="rounded-2xl px-5 py-4 relative overflow-hidden"
+          style={isPrincess ? {
+            background: 'linear-gradient(135deg,rgba(255,107,157,0.2),rgba(199,125,255,0.15))',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,107,157,0.35)',
+          } : {
+            background: 'linear-gradient(135deg,rgba(10,6,30,0.97),rgba(20,10,50,0.97))',
+            border: '1px solid rgba(255,107,0,0.25)',
+          }}>
+          <p className="text-[10px] font-black tracking-[0.22em] uppercase mb-2"
+            style={{ color: isPrincess ? 'rgba(255,107,157,0.8)' : 'rgba(255,107,0,0.6)' }}>
+            {isPrincess ? '🎂 お誕生日' : '📅 BIRTHDAY'}
+          </p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs font-bold" style={{ color: isPrincess ? '#C77DFF' : 'rgba(255,255,255,0.4)' }}>{bd.y}</span>
+            <span className="font-black text-3xl" style={{ color: isPrincess ? '#FF6B9D' : '#FFD700',
+              textShadow: isPrincess ? '0 0 20px rgba(255,107,157,0.5)' : '0 0 20px rgba(255,215,0,0.5)' }}>
+              {bd.md}
+            </span>
+            <span className="text-sm font-bold" style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,255,255,0.35)' }}>（{bd.w}）</span>
+          </div>
+        </div>
+
+        {/* ── Lesson notes ── */}
+        <div className="rounded-2xl overflow-hidden"
+          style={isPrincess ? {
+            background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,215,0,0.35)',
+            boxShadow: '0 4px 20px rgba(199,125,255,0.12)',
+          } : {
+            background: 'rgba(10,6,30,0.97)',
+            border: '1px solid rgba(255,107,0,0.25)',
+          }}>
+          <div className="px-4 py-3 border-b"
+            style={{ borderColor: isPrincess ? 'rgba(255,215,0,0.2)' : 'rgba(255,107,0,0.15)' }}>
+            <p className="font-black text-sm"
+              style={{ color: isPrincess ? '#7B1FA2' : '#FF9F0A' }}>
+              {isPrincess ? '✦ 魔法の日誌 — レッスン記録' : '▸ LESSON LOG'}
+            </p>
+            <p className="text-[10px] mt-0.5"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,255,255,0.3)' }}>
+              {isPrincess ? '今日のレッスンで気づいたことを書いてね' : '今日のレッスン記録を入力'}
+            </p>
+          </div>
+
+          <div className="px-4 py-3 space-y-2">
+            {loadingNotes ? (
+              <div className="flex items-center justify-center py-4 gap-2">
+                <div className="animate-spin text-lg">{isPrincess ? '✨' : '⭐'}</div>
+                <span className="text-xs" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>読み込み中…</span>
+              </div>
+            ) : (
+              <textarea
+                rows={6}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder={isPrincess
+                  ? 'スタッカートが上手になってきた！手首の力が抜けてきた気がする…✦'
+                  : '今日はリズムの練習を重点的に。左手の動きがだいぶ安定してきた。'}
+                className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none leading-relaxed"
+                style={isPrincess ? {
+                  background: 'rgba(255,240,255,0.8)',
+                  color: '#3d004d',
+                  border: '1px solid rgba(199,125,255,0.35)',
+                } : {
+                  background: 'rgba(255,255,255,0.07)',
+                  color: 'white',
+                  border: '1px solid rgba(255,107,0,0.2)',
+                }}
+              />
+            )}
+
+            {saved && (
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2 animate-pop-in"
+                style={isPrincess
+                  ? { background:'rgba(199,125,255,0.12)', border:'1px solid rgba(199,125,255,0.25)' }
+                  : { background:'rgba(52,199,89,0.1)', border:'1px solid rgba(52,199,89,0.2)' }}>
+                <span className="text-base">{isPrincess ? '✨' : '✓'}</span>
+                <span className="text-xs font-bold"
+                  style={{ color: isPrincess ? '#C77DFF' : '#34C759' }}>
+                  {isPrincess ? '日誌を保存しました！' : 'レッスン記録を保存しました！'}
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveNotes}
+              disabled={saving || loadingNotes}
+              className="w-full py-3 rounded-xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-50"
+              style={isPrincess ? {
+                background: 'linear-gradient(90deg,#FF6B9D,#C77DFF)',
+                color: 'white',
+                boxShadow: '0 4px 16px rgba(199,125,255,0.35)',
+              } : {
+                background: 'linear-gradient(90deg,#FF6B00,#FFD700)',
+                color: '#1a0030',
+                boxShadow: '0 4px 16px rgba(255,107,0,0.35)',
+              }}>
+              {saving ? (isPrincess ? '✦ 保存中…' : '書き込み中…') : (isPrincess ? '✦ 日誌を保存する' : '▸ レッスン記録を保存')}
+            </button>
+          </div>
+        </div>
 
       </div>
     </div>
