@@ -1,4 +1,5 @@
 import type { MusicQuestion } from './musicQuizData';
+import { BEGINNER_QUESTIONS } from './musicQuizData';
 
 const PROGRESS_KEY = 'music_quiz_progress_v1';
 
@@ -16,12 +17,17 @@ export interface MusicProgress {
 const DEFAULT: MusicProgress = { level: 1, records: {}, lastWrongIds: [] };
 
 export const LEVEL_LABELS: Record<number, string> = {
-  1: '初心者（ドレミ）',
-  2: '初級（音符読み）',
-  3: '中級（強弱記号）',
-  4: '上級（音楽記号）',
-  5: '達人（総合）',
+  1: 'ドレミ（超かんたん）',
+  2: 'ドレミファソ（かんたん）',
+  3: '音符読み（ふつう）',
+  4: '音楽記号（むずかしい）',
+  5: '達人（超むずかしい）',
 };
+
+/** How many questions per game session for each level */
+export function getSessionCount(level: number): number {
+  return level === 1 ? 3 : 5;
+}
 
 export function loadProgress(): MusicProgress {
   if (typeof window === 'undefined') return { ...DEFAULT };
@@ -58,7 +64,10 @@ export function finishGame(
     if (!correct) wrongIds.push(id);
   }
 
-  const newLevel = (score / total >= 0.8 && p.level < 5) ? p.level + 1 : p.level;
+  // Level 1: must get ALL correct (3/3) to advance
+  // Level 2+: need ≥80% (4/5) to advance
+  const threshold = p.level === 1 ? total : Math.ceil(total * 0.8);
+  const newLevel = (score >= threshold && p.level < 5) ? p.level + 1 : p.level;
   return { level: newLevel, records, lastWrongIds: wrongIds };
 }
 
@@ -68,11 +77,18 @@ export function selectAdaptive(
   p: MusicProgress,
   count = 5,
 ): { question: MusicQuestion; isReview: boolean }[] {
+  const shuffle = <T>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+
+  // ── Levels 1 & 2: use beginner-only pool, no adaptive review logic ──────────
+  if (p.level <= 2) {
+    const pool = BEGINNER_QUESTIONS.filter(q => q.difficulty === p.level);
+    return shuffle(pool).slice(0, count).map(q => ({ question: q, isReview: false }));
+  }
+
+  // ── Level 3+: adaptive selection from full question set ─────────────────────
   const weakSet   = new Set(getWeakIds(p));
   const wrongSet  = new Set(p.lastWrongIds);
   const reviewSet = new Set([...weakSet, ...wrongSet]);
-
-  const shuffle = <T>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
 
   const review  = shuffle(all.filter(q => reviewSet.has(q.id)));
   const onLevel = shuffle(all.filter(q =>
@@ -80,23 +96,17 @@ export function selectAdaptive(
     q.difficulty >= Math.max(1, p.level - 1) &&
     q.difficulty <= p.level + 1,
   ));
-  // Fallback: anything not already picked
   const fallback = shuffle(all.filter(q => !reviewSet.has(q.id)));
 
   const picked: { question: MusicQuestion; isReview: boolean }[] = [];
 
-  // Up to 2 review questions (leave at least 1 slot for new material)
   for (const q of review.slice(0, Math.min(2, count - 1))) {
     picked.push({ question: q, isReview: true });
   }
-
-  // Fill with on-level questions
   for (const q of onLevel) {
     if (picked.length >= count) break;
     picked.push({ question: q, isReview: false });
   }
-
-  // If still not enough, use fallback
   const usedIds = new Set(picked.map(x => x.question.id));
   for (const q of fallback) {
     if (picked.length >= count) break;

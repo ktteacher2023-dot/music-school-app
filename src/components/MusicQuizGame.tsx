@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ALL_QUESTIONS, type MusicQuestion } from '@/lib/musicQuizData';
 import {
   loadProgress, saveProgress, finishGame, selectAdaptive,
-  getWeakIds, LEVEL_LABELS,
+  getWeakIds, LEVEL_LABELS, getSessionCount,
 } from '@/lib/musicProgress';
 
 // EXP: base by score (0–5) + hardBonus per hard-correct (difficulty ≥ 4)
@@ -132,9 +132,9 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
 
   const startGame = () => {
     const progress = loadProgress();
-    const selected = selectAdaptive(ALL_QUESTIONS, progress, 5);
+    const count = getSessionCount(progress.level);
+    const selected = selectAdaptive(ALL_QUESTIONS, progress, count);
     const weak = getWeakIds(progress);
-    // Review: items from lastWrongIds OR weak set
     const reviewSet = new Set([...progress.lastWrongIds, ...weak]);
     const finalItems = selected.map(x => ({ ...x, isReview: reviewSet.has(x.question.id) }));
     setItems(finalItems);
@@ -215,20 +215,43 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
           background: isPrincess ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.05)',
           border: `1px solid ${accent}44`, marginBottom: 24,
         }}>
+          {progress.level === 1 && (
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <p style={{ fontSize: 28, marginBottom: 4 }}>🎵 ド　レ　ミ</p>
+              <p style={{ fontSize: 13, color: textSub, lineHeight: 1.7 }}>
+                まずはこの3つの音を完璧に覚えよう！<br/>
+                全問正解でレベルアップだよ✨
+              </p>
+            </div>
+          )}
+          {progress.level === 2 && (
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <p style={{ fontSize: 22, marginBottom: 4 }}>🎵 ド レ ミ ファ ソ</p>
+              <p style={{ fontSize: 13, color: textSub, lineHeight: 1.7 }}>
+                5つの音に挑戦！4問以上正解で<br/>次のレベルに進めるよ🌟
+              </p>
+            </div>
+          )}
           <ul style={{ fontSize: 13, color: textSub, lineHeight: 1.9, paddingLeft: 16, margin: 0 }}>
-            <li>全5問の音符・記号クイズ！</li>
-            {reviewCount > 0 && (
+            <li>全{getSessionCount(progress.level)}問の音符クイズ！</li>
+            {reviewCount > 0 && progress.level >= 3 && (
               <li style={{ color: isPrincess ? '#FF6B9D' : '#FF9F0A', fontWeight: 700 }}>
                 📖 復習チャンス: {reviewCount}問含む
               </li>
             )}
-            <li>難問正解で{isPrincess ? '✨ ボーナスEXP+5！' : '⚡ ボーナスEXP+5！'}</li>
-            <li>4問以上正解でクイズレベルアップ！</li>
+            {progress.level >= 3 && (
+              <li>難問正解で{isPrincess ? '✨ ボーナスEXP+5！' : '⚡ ボーナスEXP+5！'}</li>
+            )}
           </ul>
           <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {['5問→+50', '4問→+30', '3問→+15'].map(s => (
-              <span key={s} style={{ fontSize: 11, fontWeight: 900, padding: '2px 8px', borderRadius: 20, background: `${accent}22`, color: accent, border: `1px solid ${accent}55` }}>{s}</span>
-            ))}
+            {progress.level === 1
+              ? [['3問→+8', '2問→+4', '1問→+2']].flat().map(s => (
+                  <span key={s} style={{ fontSize: 11, fontWeight: 900, padding: '2px 8px', borderRadius: 20, background: `${accent}22`, color: accent, border: `1px solid ${accent}55` }}>{s}</span>
+                ))
+              : ['5問→+50', '4問→+30', '3問→+15'].map(s => (
+                  <span key={s} style={{ fontSize: 11, fontWeight: 900, padding: '2px 8px', borderRadius: 20, background: `${accent}22`, color: accent, border: `1px solid ${accent}55` }}>{s}</span>
+                ))
+            }
           </div>
         </div>
 
@@ -322,9 +345,9 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
               </span>
               <DiffBadge diff={q.difficulty} isPrincess={isPrincess}/>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 900, color: textSub }}>{idx + 1} / 5 問</span>
+            <span style={{ fontSize: 13, fontWeight: 900, color: textSub }}>{idx + 1} / {items.length} 問</span>
           </div>
-          <ScorePips total={5} filled={score} isPrincess={isPrincess}/>
+          <ScorePips total={items.length} filled={score} isPrincess={isPrincess}/>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 20px 24px' }}>
@@ -358,13 +381,23 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
             {q.question}
           </p>
 
-          {/* Choices */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {/* Choices — 3択は1列で大きく、4択以上は2列 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: q.choices.length <= 3 ? '1fr' : '1fr 1fr',
+            gap: 10,
+          }}>
             {q.choices.map((choice, i) => (
               <button key={i} onClick={() => handleChoice(i)} disabled={phase === 'feedback'}
-                style={{ padding: '14px 8px', borderRadius: 12, fontSize: 16, fontWeight: 900,
-                  cursor: phase === 'question' ? 'pointer' : 'default', transition: 'all 0.25s',
-                  ...choiceBg(i) }}>
+                style={{
+                  padding: q.choices.length <= 3 ? '18px 8px' : '14px 8px',
+                  borderRadius: 12,
+                  fontSize: q.choices.length <= 3 ? 22 : 16,
+                  fontWeight: 900,
+                  cursor: phase === 'question' ? 'pointer' : 'default',
+                  transition: 'all 0.25s',
+                  ...choiceBg(i),
+                }}>
                 {phase === 'feedback' && i === q.correctIndex && '✅ '}
                 {phase === 'feedback' && i === selectedIdx && i !== q.correctIndex && '❌ '}
                 {choice}
@@ -379,13 +412,24 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
               background: lastCorrect ? 'rgba(52,199,89,0.15)' : 'rgba(255,59,48,0.12)',
               border: `1px solid ${lastCorrect ? '#34C75966' : '#FF3B3066'}`,
             }}>
-              <p style={{ fontSize: 15, fontWeight: 900, marginBottom: lastCorrect ? 0 : 4, color: lastCorrect ? '#34C759' : '#FF3B30' }}>
+              <p style={{ fontSize: 15, fontWeight: 900, marginBottom: 4, color: lastCorrect ? '#34C759' : '#FF3B30' }}>
                 {lastCorrect
-                  ? (isPrincess ? '✨ せいかい！' : '🎨 音撃ヒット！')
+                  ? (isPrincess ? '✨ せいかい！すごい！' : '🎨 ナイスヒット！')
                   : (isPrincess ? '💔 ちがうよ！' : '💀 ミス！')}
               </p>
               {!lastCorrect && (
-                <p style={{ fontSize: 13, color: textSub, lineHeight: 1.6 }}>{q.explanation}</p>
+                <>
+                  <p style={{
+                    fontSize: 17, fontWeight: 900, marginBottom: 6,
+                    color: isPrincess ? '#C77DFF' : '#FFD700',
+                    textShadow: isPrincess ? '0 0 10px rgba(199,125,255,0.6)' : '0 0 10px rgba(255,215,0,0.5)',
+                  }}>
+                    {isPrincess
+                      ? `これは「${q.choices[q.correctIndex]}」だよ！`
+                      : `正解は「${q.choices[q.correctIndex]}」だ！`}
+                  </p>
+                  <p style={{ fontSize: 13, color: textSub, lineHeight: 1.6 }}>{q.explanation}</p>
+                </>
               )}
             </div>
           )}
@@ -395,39 +439,57 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
   }
 
   // ── Result ─────────────────────────────────────────────────────────────────
-  const expGained = BASE_EXP[finalScore] + finalHard * HARD_BONUS;
+  const total = items.length;
+  const expGained = BASE_EXP[Math.min(finalScore, BASE_EXP.length - 1)] + finalHard * HARD_BONUS;
+  const perfect = finalScore === total;
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-5" style={bgStyle}>
-      <div style={{
-        fontSize: 64, marginBottom: 12,
-        filter: finalScore >= 4 ? `drop-shadow(0 0 16px ${accent}cc)` : undefined,
-        animation: finalScore >= 4 ? 'floatBounce 2s ease-in-out infinite' : undefined,
-      }}>
-        {finalScore === 5 ? '🏆' : finalScore >= 3 ? (isPrincess ? '✨' : '⚡') : (isPrincess ? '🌸' : '🎮')}
-      </div>
 
-      <h2 style={{ fontSize: 32, fontWeight: 900, color: textMain, textShadow: `0 0 24px ${accent}88`, marginBottom: 4 }}>
-        {finalScore} / 5 問正解！
-      </h2>
-      <ScorePips total={5} filled={finalScore} isPrincess={isPrincess}/>
-
-      {/* Level up notice */}
+      {/* Level up — full-screen celebration banner */}
       {leveledUp && (
         <div style={{
-          marginTop: 14, padding: '10px 20px', borderRadius: 14,
-          background: isPrincess ? 'rgba(255,215,0,0.18)' : 'rgba(255,215,0,0.15)',
-          border: '1.5px solid rgba(255,215,0,0.6)',
-          animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          position: 'absolute', top: 0, left: 0, right: 0,
+          padding: '18px 20px 14px',
+          background: isPrincess
+            ? 'linear-gradient(135deg,rgba(255,107,157,0.95),rgba(199,125,255,0.95))'
+            : 'linear-gradient(135deg,rgba(255,107,0,0.95),rgba(255,215,0,0.95))',
           textAlign: 'center',
+          animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          zIndex: 1,
         }}>
-          <p style={{ fontSize: 14, fontWeight: 900, color: '#FFD700', textShadow: '0 0 12px rgba(255,215,0,0.8)' }}>
-            🎉 クイズレベルアップ！
+          <p style={{ fontSize: 26, fontWeight: 900, color: 'white',
+            textShadow: '0 2px 12px rgba(0,0,0,0.3)', letterSpacing: '0.04em' }}>
+            🎉 レベルアップ！！
           </p>
-          <p style={{ fontSize: 12, color: textSub, marginTop: 2 }}>
-            レベル {newQuizLevel}「{LEVEL_LABELS[newQuizLevel]}」に挑戦できるよ！
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 2, fontWeight: 700 }}>
+            レベル {newQuizLevel}「{LEVEL_LABELS[newQuizLevel]}」に進んだよ！
           </p>
+          {newQuizLevel === 2 && (
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+              次はド・レ・ミ・ファ・ソの5音に挑戦だ！
+            </p>
+          )}
+          {newQuizLevel === 3 && (
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+              これからはもっといろんな音符が出てくるよ！
+            </p>
+          )}
         </div>
       )}
+
+      <div style={{
+        fontSize: 64, marginBottom: 12, position: 'relative', zIndex: 2,
+        marginTop: leveledUp ? 120 : 0,
+        filter: perfect ? `drop-shadow(0 0 16px ${accent}cc)` : undefined,
+        animation: perfect ? 'floatBounce 2s ease-in-out infinite' : undefined,
+      }}>
+        {perfect ? '🏆' : finalScore >= Math.ceil(total * 0.6) ? (isPrincess ? '✨' : '⚡') : (isPrincess ? '🌸' : '🎮')}
+      </div>
+
+      <h2 style={{ fontSize: 32, fontWeight: 900, color: textMain, textShadow: `0 0 24px ${accent}88`, marginBottom: 4, position: 'relative', zIndex: 2 }}>
+        {finalScore} / {total} 問正解！
+      </h2>
+      <ScorePips total={total} filled={finalScore} isPrincess={isPrincess}/>
 
       {/* EXP */}
       <div style={{

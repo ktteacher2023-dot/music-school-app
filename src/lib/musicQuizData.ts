@@ -235,3 +235,66 @@ export const ALL_QUESTIONS: MusicQuestion[] = [
 export function getQuestionById(id: string): MusicQuestion | undefined {
   return ALL_QUESTIONS.find(q => q.id === id);
 }
+
+// ─── 初心者専用問題プール（レベル1: ドレミ3択 / レベル2: ドレミファソ4択） ─────
+// choices を意図的に少なく・隣接音だけに絞って確実にクリアできる設計
+export const BEGINNER_QUESTIONS: NoteQuestion[] = [
+  // ── Level 1: ド・レ・ミ のみ ─────────────────────────────────────────────
+  {
+    id: 'b-do', type: 'note', difficulty: 1,
+    noteY: 100, ledgerY: 100,
+    question: 'この音は何の音？',
+    choices: ['ド', 'レ', 'ミ'], correctIndex: 0,
+    explanation: 'これはドだよ！五線の下の小さな線（加線）の上にある音だよ。',
+  },
+  {
+    id: 'b-re', type: 'note', difficulty: 1,
+    noteY: 94,
+    question: 'この音は何の音？',
+    choices: ['ド', 'レ', 'ミ'], correctIndex: 1,
+    explanation: 'これはレだよ！一番下の線のすぐ下の空間にある音だよ。',
+  },
+  {
+    id: 'b-mi', type: 'note', difficulty: 1,
+    noteY: 88,
+    question: 'この音は何の音？',
+    choices: ['ド', 'レ', 'ミ'], correctIndex: 2,
+    explanation: 'これはミだよ！一番下の線の上にある音だよ。',
+  },
+  // ── Level 2: ド〜ソ（4択） ────────────────────────────────────────────────
+  {
+    id: 'b-do2', type: 'note', difficulty: 2,
+    noteY: 100, ledgerY: 100,
+    question: 'この音は何の音？',
+    choices: ['ド', 'レ', 'ファ', 'ソ'], correctIndex: 0,
+    explanation: 'これはドだよ！五線の下の加線の上にある音だよ。',
+  },
+  {
+    id: 'b-re2', type: 'note', difficulty: 2,
+    noteY: 94,
+    question: 'この音は何の音？',
+    choices: ['ド', 'レ', 'ミ', 'ファ'], correctIndex: 1,
+    explanation: 'これはレだよ！一番下の線のすぐ下の空間にある音だよ。',
+  },
+  {
+    id: 'b-mi2', type: 'note', difficulty: 2,
+    noteY: 88,
+    question: 'この音は何の音？',
+    choices: ['レ', 'ミ', 'ファ', 'ソ'], correctIndex: 1,
+    explanation: 'これはミだよ！一番下の線の上にある音だよ。',
+  },
+  {
+    id: 'b-fa', type: 'note', difficulty: 2,
+    noteY: 82,
+    question: 'この音は何の音？',
+    choices: ['ド', 'ミ', 'ファ', 'ソ'], correctIndex: 2,
+    explanation: 'これはファだよ！1本目と2本目の線の間の空間にある音だよ。',
+  },
+  {
+    id: 'b-so', type: 'note', difficulty: 2,
+    noteY: 76,
+    question: 'この音は何の音？',
+    choices: ['ミ', 'ファ', 'ソ', 'ラ'], correctIndex: 2,
+    explanation: 'これはソだよ！下から2本目の線の上にある音だよ。',
+  },
+];
