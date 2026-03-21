@@ -1317,27 +1317,38 @@ function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
     if (hasPassword) {
       const stored = localStorage.getItem(TEACHER_PW_KEY) ?? '';
       if (currentPw !== stored) {
-        setError('現在のパスワードが違います ✗');
+        setError('現在のパスコードが違います ✗');
         return;
       }
     }
-    if (newPw.length < 4) {
-      setError('パスワードは4文字以上にしてください');
+    if (!/^\d{4}$/.test(newPw)) {
+      setError('パスコードは数字4桁で入力してください');
       return;
     }
     if (newPw !== confirmPw) {
-      setError('新しいパスワードが一致しません ✗');
+      setError('新しいパスコードが一致しません ✗');
       return;
     }
     setLoading(true);
     try {
+      // ① まずローカルに保存（ログイン判定はここを見る）
       localStorage.setItem(TEACHER_PW_KEY, newPw);
+
+      // ② Supabase auth セッションがあれば連携（任意・失敗しても続行）
       if (supabase) {
-        try { await supabase.auth.updateUser({ password: newPw }); }
-        catch (e) { console.warn('[auth] updateUser:', e); }
+        const { error: supaError } = await supabase.auth.updateUser({ password: newPw });
+        if (supaError) {
+          // セッションなし等は想定内のため警告のみ
+          console.warn('[auth] updateUser:', supaError.message);
+        }
       }
+
       setSuccess(true);
-      setTimeout(onClose, 3200);
+      setTimeout(onClose, 2800);
+    } catch (e) {
+      setError('予期せぬエラーが発生しました。もう一度お試しください。');
+      // ロールバック
+      localStorage.removeItem(TEACHER_PW_KEY);
     } finally {
       setLoading(false);
     }
@@ -1417,19 +1428,19 @@ function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
                 </span>
               ))}
             </div>
-            <p className="font-black text-lg text-[#1C1C1E] text-center">合言葉の更新に成功しました！</p>
-            <p className="text-sm text-[#34C759] font-semibold">これからも安全に使えるよ ✓</p>
+            <p className="font-black text-lg text-[#1C1C1E] text-center">パスコードの更新が完了！</p>
+            <p className="text-sm text-[#34C759] font-semibold">次回ログインから新しいパスコードが使えます ✓</p>
           </div>
         ) : (
           <div className="space-y-4">
             {hasPassword && (
               <PwField
-                label="現在の合言葉"
+                label="現在のパスコード"
                 value={currentPw}
                 onChange={setCurrentPw}
                 show={showCur}
                 onToggle={() => setShowCur(v => !v)}
-                placeholder="今のパスワードを入力"
+                placeholder="今使っている4桁の数字"
               />
             )}
             {!hasPassword && (
@@ -1441,12 +1452,12 @@ function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
               </div>
             )}
             <PwField
-              label="新しい合言葉"
+              label="新しいパスコード"
               value={newPw}
               onChange={setNewPw}
               show={showNew}
               onToggle={() => setShowNew(v => !v)}
-              placeholder="4文字以上"
+              placeholder="数字4桁（例：5678）"
             />
             <PwField
               label="もう一度入力（確認）"
@@ -1454,7 +1465,7 @@ function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
               onChange={setConfirmPw}
               show={showConf}
               onToggle={() => setShowConf(v => !v)}
-              placeholder="同じ合言葉をもう一度"
+              placeholder="同じパスコードをもう一度"
             />
 
             {/* Error */}
@@ -1476,11 +1487,18 @@ function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
                 color: 'white',
                 boxShadow: '0 4px 16px rgba(0,122,255,0.35)',
               }}>
-              {loading ? '更新中…' : '合言葉を更新する 🔑'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                  </svg>
+                  更新中…
+                </span>
+              ) : 'パスコードを更新する 🔑'}
             </button>
 
             <p className="text-center text-[10px] text-[#C7C7CC]">
-              パスワードは●●●で隠されて保存されます
+              数字4桁のパスコードがログイン時に使われます
             </p>
           </div>
         )}

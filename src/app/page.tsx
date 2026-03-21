@@ -62,7 +62,9 @@ export default function RoleSelectPage() {
 
     // 4桁入力完了 → 検証
     if (next.length === PIN_LENGTH) {
-      if (next === TEACHER_PIN) {
+      // localStorage に変更済みのPINがあればそちらを使う
+      const storedPin = localStorage.getItem('teacher_password') ?? TEACHER_PIN;
+      if (next === storedPin) {
         // 正解
         localStorage.setItem(ROLE_KEY, 'teacher');
         router.push('/teacher');
