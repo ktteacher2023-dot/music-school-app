@@ -1302,11 +1302,15 @@ export default function StudentPage() {
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
 
   // music quiz game (single-note)
-  const [showMusicGame,      setShowMusicGame]      = useState(false);
-  const [gamePlayedToday,    setGamePlayedToday]    = useState(false);
+  const [showMusicGame,  setShowMusicGame]  = useState(false);
   // melody quiz game
-  const [showMelodyGame,     setShowMelodyGame]     = useState(false);
-  const [melodyPlayedToday,  setMelodyPlayedToday]  = useState(false);
+  const [showMelodyGame, setShowMelodyGame] = useState(false);
+  // ── game-played flags: computed fresh every render from localStorage ──────
+  // Using state as a tick counter so handlers can force a re-render after writing localStorage
+  const [gameTick, setGameTick] = useState(0);
+  const gamePlayedToday   = mounted ? localStorage.getItem(MUSIC_GAME_KEY)  === today : false;
+  const melodyPlayedToday = mounted ? localStorage.getItem(MELODY_GAME_KEY) === today : false;
+  void gameTick; // consumed only to trigger re-render
   // treasure videos (teacher lesson records)
   const [treasureRecs,     setTreasureRecs]     = useState<LessonRecord[]>([]);
   const [loadingTreasure,  setLoadingTreasure]  = useState(false);
@@ -1335,8 +1339,7 @@ export default function StudentPage() {
     setAvatarUrl(p.avatar_url ?? null);
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
-    setGamePlayedToday(localStorage.getItem(MUSIC_GAME_KEY) === todayStr());
-    setMelodyPlayedToday(localStorage.getItem(MELODY_GAME_KEY) === todayStr());
+    // gamePlayedToday / melodyPlayedToday are now computed directly from localStorage each render
     // Load current badges; if expression badge was just awarded by teacher, celebrate
     const currentBadges = getBadges().map(b => b.id);
     setMyBadges(currentBadges);
@@ -1499,7 +1502,7 @@ export default function StudentPage() {
     setShowMusicGame(false);
     // Mark today as played (localStorage + Supabase)
     localStorage.setItem(MUSIC_GAME_KEY, today);
-    setGamePlayedToday(true);
+    setGameTick(t => t + 1); // force re-render so gamePlayedToday re-reads localStorage
     if (supabase) {
       const p = getProfile();
       if (p) {
@@ -1523,7 +1526,7 @@ export default function StudentPage() {
   const handleMelodyGameEnd = (expGained: number) => {
     setShowMelodyGame(false);
     localStorage.setItem(MELODY_GAME_KEY, today);
-    setMelodyPlayedToday(true);
+    setGameTick(t => t + 1); // force re-render so melodyPlayedToday re-reads localStorage
     if (expGained <= 0) return;
     const newTotalXp = ms.totalXp + expGained;
     const newLevel   = calcLevel(newTotalXp);
