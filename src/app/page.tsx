@@ -92,7 +92,7 @@ export default function RoleSelectPage() {
       {/* ── Role selection ── */}
       <div
         className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center px-6"
-        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* App icon + title */}
         <div className="flex flex-col items-center mb-12">

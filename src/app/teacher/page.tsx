@@ -224,8 +224,8 @@ export default function TeacherPage() {
       )}
 
       {/* ── Header ── */}
-      <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-10 border-b border-[#C6C6C8]/60"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <header className="bg-white/85 backdrop-blur-xl sticky z-10 border-b border-[#C6C6C8]/60"
+        style={{ top: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             {mounted && (

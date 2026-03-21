@@ -62,7 +62,6 @@ export default function SetupPage() {
           : isKnight
           ? 'linear-gradient(160deg,#E8F4FF 0%,#EEF2FF 50%,#E0E7FF 100%)'
           : 'linear-gradient(160deg,#F2F2F7,#EAF2FF)',
-        paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         transition: 'background 0.5s ease',
       }}>
@@ -329,7 +328,7 @@ function CelebrationScreen({ name, type }: { name: string; type: CharacterType }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center overflow-hidden relative"
-      style={{ background: bg, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)' }}>
+      style={{ background: bg, paddingBottom:'env(safe-area-inset-bottom)' }}>
 
       {/* Particle rain */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

@@ -82,8 +82,8 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-[#F2F2F7]">
       {/* Header */}
       <header
-        className="bg-white/80 backdrop-blur-xl sticky top-0 z-10 border-b border-[#C6C6C8]/60"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        className="bg-white/80 backdrop-blur-xl sticky z-10 border-b border-[#C6C6C8]/60"
+        style={{ top: 'env(safe-area-inset-top)' }}
       >
         <div className="px-4 py-3">
           <h1 className="text-2xl font-bold text-[#1C1C1E]">カレンダー</h1>

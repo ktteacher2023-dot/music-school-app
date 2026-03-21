@@ -434,9 +434,9 @@ export default function BestiaryPage() {
       <BackgroundLayer isPrincess={isPrincess}/>
 
       {/* Header */}
-      <header className="sticky top-0 z-20"
+      <header className="sticky z-20"
         style={{
-          paddingTop: 'env(safe-area-inset-top)',
+          top: 'env(safe-area-inset-top)',
           background: isPrincess ? 'rgba(255,240,255,0.92)' : 'rgba(8,12,28,0.95)',
           backdropFilter: 'blur(24px)',
           borderBottom: isPrincess ? '1px solid rgba(255,100,180,0.25)' : '1px solid rgba(255,180,0,0.18)',

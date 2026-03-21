@@ -42,7 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SwRegister />
         <main
           className="min-h-screen"
-          style={{ paddingBottom: 'calc(49px + env(safe-area-inset-bottom))' }}
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'calc(49px + env(safe-area-inset-bottom))',
+          }}
         >
           {children}
         </main>

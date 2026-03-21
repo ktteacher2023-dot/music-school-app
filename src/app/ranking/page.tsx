@@ -469,7 +469,7 @@ export default function RankingPage() {
 
       {/* Header */}
       <div className="relative z-10 text-center px-4 pt-safe"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 20px)' }}>
+        style={{ paddingTop: '20px' }}>
         {isPrincess ? (
           <>
             <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-1"
