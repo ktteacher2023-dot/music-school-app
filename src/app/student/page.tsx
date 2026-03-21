@@ -773,6 +773,184 @@ function MonsterFace({ idx, hp, maxHp, shaking, defeated, charType, accentColor 
   );
 }
 
+// ─── Teacher message card ─────────────────────────────────────────────────────
+function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
+  note: string; isNew: boolean; teacherAvatar: string | null; isPrincess: boolean;
+}) {
+  if (!note) return null;
+
+  if (isPrincess) {
+    return (
+      <div className="relative rounded-3xl overflow-hidden animate-pop-in" style={{ animationDuration:'0.5s' }}>
+        {/* Outer glow */}
+        <div className="absolute inset-0 rounded-3xl pointer-events-none"
+          style={{ boxShadow:'0 0 32px rgba(255,107,157,0.3), 0 0 64px rgba(199,125,255,0.15)' }}/>
+        <div className="relative overflow-hidden rounded-3xl"
+          style={{
+            background: 'linear-gradient(135deg,rgba(255,255,255,0.28) 0%,rgba(255,220,255,0.22) 100%)',
+            backdropFilter: 'blur(28px)',
+            border: '1px solid rgba(255,215,0,0.45)',
+          }}>
+          {/* Shimmer */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+            <div className="absolute inset-y-0 w-1/4 bg-white/12 skew-x-12 animate-shimmer"/>
+          </div>
+          {/* Corner sparkles */}
+          {[{t:6,l:10,c:'#FFD700',d:'0s',f:12},{t:6,r:10,c:'#C77DFF',d:'0.5s',f:10},{b:6,l:12,c:'#FFB7C5',d:'1s',f:9},{b:6,r:8,c:'#87CEEB',d:'0.7s',f:11}].map((s,i)=>(
+            <span key={i} className="absolute select-none pointer-events-none"
+              style={{ top:s.t,left:s.l,bottom:s.b,right:s.r, fontSize:s.f, color:s.c, animation:`twinkle 2.4s ${s.d} ease-in-out infinite` }}>✦</span>
+          ))}
+
+          {/* Header – ribbon banner */}
+          <div className="relative flex items-center justify-between px-4 pt-3 pb-2"
+            style={{ borderBottom:'1px solid rgba(255,215,0,0.2)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-lg leading-none" style={{ filter:'drop-shadow(0 0 8px rgba(255,107,157,0.7))' }}>💌</span>
+              <span className="text-[11px] font-black tracking-[0.18em]"
+                style={{ background:'linear-gradient(90deg,#FF6B9D,#C77DFF,#FFD700)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+                ✦ 先生からの魔法の手紙 ✦
+              </span>
+            </div>
+            {isNew && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse"
+                style={{ background:'linear-gradient(90deg,#FF6B9D,#C77DFF)', color:'white', boxShadow:'0 2px 8px rgba(199,125,255,0.5)' }}>
+                ✨ NEW
+              </span>
+            )}
+          </div>
+
+          {/* Ribbon decoration SVG */}
+          <div className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none select-none" style={{ zIndex:1 }}>
+            <svg width="80" height="14" viewBox="0 0 80 14" fill="none">
+              <path d="M0,7 Q20,0 40,7 Q60,14 80,7" stroke="#FFD700" strokeWidth="1.5" opacity="0.6" fill="none"/>
+            </svg>
+          </div>
+
+          {/* Message body */}
+          <div className="relative z-10 flex items-start gap-3 px-4 pt-3 pb-4">
+            {/* Teacher avatar */}
+            <div className="shrink-0">
+              {teacherAvatar ? (
+                <div className="relative">
+                  <img src={teacherAvatar} alt="teacher"
+                    className="w-11 h-11 rounded-full object-cover"
+                    style={{ border:'2px solid rgba(255,215,0,0.6)', boxShadow:'0 0 16px rgba(199,125,255,0.5)' }}/>
+                  {/* Magic mirror ring */}
+                  <div className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ border:'1px solid rgba(255,215,0,0.4)', boxShadow:'inset 0 0 8px rgba(199,125,255,0.3)' }}/>
+                  <span className="absolute -top-1.5 -right-1.5 text-[10px]"
+                    style={{ animation:'twinkle 2s ease-in-out infinite' }}>✦</span>
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl leading-none"
+                  style={{ background:'linear-gradient(135deg,rgba(255,215,0,0.3),rgba(199,125,255,0.3))', border:'2px solid rgba(255,215,0,0.5)', boxShadow:'0 0 16px rgba(199,125,255,0.4)' }}>
+                  👩‍🏫
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black mb-1" style={{ color:'rgba(199,125,255,0.65)' }}>先生より ✦</p>
+              <p className="text-sm leading-relaxed font-medium" style={{ color:'#4a004a' }}>
+                {note}
+              </p>
+              {/* Wax seal */}
+              <div className="flex justify-end mt-2">
+                <span className="text-xl leading-none" style={{ filter:'drop-shadow(0 0 6px rgba(255,107,157,0.7))', animation:'floatBounce 3s ease-in-out infinite' }}>🌸</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Knight – street bulletin board
+  return (
+    <div className="relative rounded-2xl overflow-hidden animate-pop-in" style={{ animationDuration:'0.5s' }}>
+      {/* Ink blobs behind */}
+      <svg className="absolute pointer-events-none select-none" width="100%" height="100%"
+        style={{ top:-6, left:-4, overflow:'visible' }} aria-hidden>
+        <ellipse cx="6%"  cy="30%" rx="14" ry="9"  fill="#FF6B00" opacity="0.3" transform="rotate(-18,50,50)"/>
+        <ellipse cx="92%" cy="60%" rx="11" ry="7"  fill="#7B00FF" opacity="0.25" transform="rotate(12,50,50)"/>
+        <circle  cx="96%" cy="18%" r="6"            fill="#FF9F0A" opacity="0.22"/>
+      </svg>
+
+      <div className="relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg,rgba(8,4,22,0.97),rgba(15,8,40,0.97))',
+          border: '1.5px solid rgba(255,107,0,0.38)',
+          boxShadow: '0 4px 32px rgba(255,107,0,0.18), inset 0 1px 0 rgba(255,200,0,0.06)',
+          borderRadius: '1rem',
+        }}>
+        {/* Concrete diagonal texture */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.035]"
+          style={{ backgroundImage:'repeating-linear-gradient(45deg,#FF6B00 0px,#FF6B00 2px,transparent 2px,transparent 14px)' }}/>
+        {/* Neon top line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background:'linear-gradient(90deg,transparent,#FF6B00,#FFD700,#FF6B00,transparent)' }}/>
+
+        {/* Header – neon sign */}
+        <div className="relative flex items-center justify-between px-4 py-2.5"
+          style={{ borderBottom:'1px solid rgba(255,107,0,0.18)' }}>
+          <div className="flex items-center gap-2.5">
+            {/* Neon dot */}
+            <div className="w-2 h-2 rounded-full"
+              style={{ background:'#FF6B00', boxShadow:'0 0 8px #FF6B00, 0 0 20px rgba(255,107,0,0.7)', animation:'nearLevelUp 1.5s ease-in-out infinite' }}/>
+            <span className="text-[11px] font-black tracking-[0.2em] uppercase"
+              style={{ color:'#FF9F0A', textShadow:'0 0 12px rgba(255,107,0,0.8)' }}>
+              先生からのメッセージ
+            </span>
+          </div>
+          {isNew && (
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md"
+              style={{ background:'#FF3B30', color:'white', boxShadow:'0 0 8px rgba(255,59,48,0.6)', animation:'nearLevelUp 0.9s ease-in-out infinite' }}>
+              NEW!
+            </span>
+          )}
+        </div>
+
+        {/* Message body */}
+        <div className="flex items-start gap-3 px-4 py-3">
+          {/* Teacher avatar */}
+          <div className="shrink-0">
+            {teacherAvatar ? (
+              <div className="relative">
+                <img src={teacherAvatar} alt="teacher"
+                  className="w-11 h-11 rounded-xl object-cover"
+                  style={{ border:'2px solid rgba(255,107,0,0.55)', boxShadow:'0 0 16px rgba(255,107,0,0.4)' }}/>
+                {/* Ink border glow */}
+                <div className="absolute inset-0 rounded-xl pointer-events-none"
+                  style={{ boxShadow:'inset 0 0 8px rgba(255,107,0,0.2)' }}/>
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl leading-none"
+                style={{ background:'linear-gradient(135deg,rgba(255,107,0,0.25),rgba(123,0,255,0.2))', border:'2px solid rgba(255,107,0,0.5)', boxShadow:'0 0 16px rgba(255,107,0,0.3)' }}>
+                👨‍🏫
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color:'rgba(255,107,0,0.6)' }}>
+              ▸ FROM TEACHER
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color:'rgba(255,255,255,0.88)' }}>
+              {note}
+            </p>
+            {/* Paint stroke decoration */}
+            <div className="mt-2 flex gap-1.5">
+              {['#FF6B00','#FFD700','#7B00FF'].map((c,i) => (
+                <div key={i} className="h-1 rounded-full" style={{ width: 20+i*12, background:c, opacity:0.5 }}/>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Level-up modal (particle burst / pixie dust) ────────────────────────────
 function LevelUpModal({ level, onClose, charType }: { level: number; onClose: () => void; charType: CharacterType }) {
   const t = getTitle(level);
@@ -1000,6 +1178,11 @@ export default function StudentPage() {
   // avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // teacher message
+  const [teacherNote,      setTeacherNote]      = useState('');
+  const [noteIsNew,        setNoteIsNew]        = useState(false);
+  const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
+
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
 
@@ -1032,6 +1215,28 @@ export default function StudentPage() {
     if (newOnes.length > 0) {
       setNewBadgeId(newOnes[0] as BadgeId);
       localStorage.setItem(celebKey, [...celebrated, ...newOnes].join(','));
+    }
+
+    // ── Teacher note & avatar ──
+    const nick = p.nickname;
+    const localNote = localStorage.getItem(`lesson_notes_${nick}`) ?? '';
+    if (localNote) {
+      setTeacherNote(localNote);
+      const updatedAt = parseInt(localStorage.getItem(`lesson_notes_updated_at_${nick}`) ?? '0');
+      const seenAt    = parseInt(localStorage.getItem(`lesson_notes_seen_at_${nick}`)    ?? '0');
+      if (updatedAt > seenAt && updatedAt > 0) setNoteIsNew(true);
+      localStorage.setItem(`lesson_notes_seen_at_${nick}`, Date.now().toString());
+    }
+    setTeacherAvatarUrl(localStorage.getItem('teacher_avatar_url'));
+    // Also attempt fresher data from Supabase
+    if (supabase) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase.from('profiles').select('lesson_notes').match({ nickname: p.nickname, birthday: p.birthday }).maybeSingle().then((r: any) => {
+        if (r?.data?.lesson_notes && r.data.lesson_notes !== localNote) {
+          setTeacherNote(r.data.lesson_notes);
+          localStorage.setItem(`lesson_notes_${nick}`, r.data.lesson_notes);
+        }
+      }, () => {});
     }
   }, [load, router]);
 
@@ -1233,6 +1438,19 @@ export default function StudentPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {/* Teacher message notification badge */}
+            {noteIsNew && (
+              <div className="relative w-8 h-8 flex items-center justify-center rounded-full"
+                style={isPrincess
+                  ? { background:'linear-gradient(135deg,rgba(255,107,157,0.25),rgba(199,125,255,0.25))', border:'1px solid rgba(255,107,157,0.5)' }
+                  : { background:'rgba(255,107,0,0.18)', border:'1px solid rgba(255,107,0,0.45)' }}>
+                <span className="text-base leading-none">{isPrincess ? '💌' : '📋'}</span>
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                  style={{ background:'#FF3B30', boxShadow:'0 0 6px rgba(255,59,48,0.7)', animation:'nearLevelUp 0.9s ease-in-out infinite' }}>
+                  ！
+                </span>
+              </div>
+            )}
             {/* Level badge */}
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full"
               style={isPrincess
@@ -1279,6 +1497,16 @@ export default function StudentPage() {
             charType={charType}
             avatarUrl={avatarUrl}
             onAvatarUpload={handleAvatarUpload}
+          />
+        )}
+
+        {/* ── Teacher message card ── */}
+        {mounted && teacherNote && (
+          <TeacherMessageCard
+            note={teacherNote}
+            isNew={noteIsNew}
+            teacherAvatar={teacherAvatarUrl}
+            isPrincess={isPrincess}
           />
         )}
 

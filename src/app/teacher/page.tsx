@@ -204,7 +204,7 @@ export default function TeacherPage() {
               <AvatarUploader
                 currentUrl={teacherAvatarUrl}
                 onUpload={handleTeacherAvatarUpload}
-                isPrincess={false}
+                isPrincess={profile?.type === 'princess'}
                 size={36}
                 shape="circle"
                 defaultContent={<span className="text-base leading-none">👨‍🏫</span>}
@@ -553,6 +553,7 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const handleSaveNotes = async () => {
     setSaving(true);
     localStorage.setItem(NOTES_KEY, notes);
+    localStorage.setItem(`lesson_notes_updated_at_${profile.nickname}`, Date.now().toString());
     if (supabase) {
       try {
         await supabase.from('profiles')
