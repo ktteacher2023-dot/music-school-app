@@ -1323,6 +1323,9 @@ export default function StudentPage() {
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
 
+  // submission in-flight state (shows 送信中... on button)
+  const [submitting, setSubmitting] = useState(false);
+
   // ink animation (knight attack button)
   const [inkPos, setInkPos] = useState<{x:number; y:number}|null>(null);
   const inkTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1577,14 +1580,16 @@ export default function StudentPage() {
   const handleLogout = () => { localStorage.removeItem(ROLE_KEY); router.push('/'); };
 
   const handleAttackWithInk = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!canAttack) return;
+    if (!canAttack || submitting) return;
     if (!isPrincess) {
       const rect = e.currentTarget.getBoundingClientRect();
       setInkPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       if (inkTimer.current) clearTimeout(inkTimer.current);
       inkTimer.current = setTimeout(() => setInkPos(null), 750);
     }
-    handleAttack();
+    setSubmitting(true);
+    // Brief delay so "送信中..." is visible before completion card appears
+    setTimeout(() => handleAttack(), 350);
   };
   const handleDelete = (id: string) => { deleteRecord(id); load(); };
   const totalMins = records.reduce((s,r)=>s+r.duration,0);
@@ -2299,9 +2304,9 @@ export default function StudentPage() {
               )}
             </div>
 
-            <button onClick={handleAttackWithInk} disabled={!canAttack}
+            <button onClick={handleAttackWithInk} disabled={!canAttack || submitting}
               className="w-full py-4 text-base font-black tracking-widest relative overflow-hidden transition-all active:scale-[0.97]"
-              style={canAttack ? {
+              style={canAttack && !submitting ? {
                 background: isPrincess
                   ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
                   : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
@@ -2309,6 +2314,13 @@ export default function StudentPage() {
                 boxShadow: isPrincess
                   ? '0 -1px 0 rgba(0,0,0,0.08), 0 2px 20px rgba(255,107,157,0.5)'
                   : '0 -1px 0 rgba(0,0,0,0.3), 0 2px 20px rgba(255,59,48,0.4)',
+                letterSpacing: '0.12em',
+              } : submitting ? {
+                background: isPrincess
+                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
+                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
+                color: 'white',
+                opacity: 0.7,
                 letterSpacing: '0.12em',
               } : {
                 background: isPrincess ? 'rgba(220,180,255,0.2)' : 'rgba(255,255,255,0.05)',
@@ -2325,8 +2337,17 @@ export default function StudentPage() {
                   }}/>
               )}
               <span className="relative flex items-center justify-center gap-2">
-                {isPrincess ? <MagicWandIcon/> : <PaintRollerIcon/>}
-                {streakLbl ? theme.attackStreakLabel(streakLbl) : videoFile ? theme.attackVideoLabel : theme.attackLabel}
+                {submitting ? (
+                  <>
+                    <span style={{ animation: 'spin 0.8s linear infinite', display: 'inline-block' }}>⏳</span>
+                    {isPrincess ? '✨ 送信中…' : '🚀 送信中…'}
+                  </>
+                ) : (
+                  <>
+                    {isPrincess ? <MagicWandIcon/> : <PaintRollerIcon/>}
+                    {streakLbl ? theme.attackStreakLabel(streakLbl) : videoFile ? theme.attackVideoLabel : theme.attackLabel}
+                  </>
+                )}
               </span>
             </button>
           </div>
