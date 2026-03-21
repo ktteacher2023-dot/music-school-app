@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { getProfile, type CharacterType } from '@/lib/profile';
 import { getTitle, calcLevel } from '@/lib/gameData';
+import { getBadges, getBadgeInfo, type BadgeId } from '@/lib/badges';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface Player {
@@ -33,7 +34,9 @@ const KNIGHT_BADGE = ['', '👑', '🥈', '🥉'];
 const PRINCESS_BADGE = ['', '👑', '💎', '✨'];
 
 // ─── Rank row (4th and beyond) ─────────────────────────────────────────────────
-function RankRow({ rank, player, isPrincess }: { rank: number; player: Player; isPrincess: boolean }) {
+function RankRow({ rank, player, isPrincess, badges }: {
+  rank: number; player: Player; isPrincess: boolean; badges?: BadgeId[];
+}) {
   const t = getTitle(player.level);
   const isMe = player.isMe;
   return (
@@ -87,6 +90,23 @@ function RankRow({ rank, player, isPrincess }: { rank: number; player: Player; i
           </span>
           <span className="text-[10px]" style={{ color: t.color }}>{t.title}</span>
         </div>
+        {isMe && badges && badges.length > 0 && (
+          <div className="flex gap-1 mt-1 flex-wrap">
+            {badges.map(id => {
+              const info = getBadgeInfo(id, isPrincess ? 'princess' : 'knight');
+              return (
+                <span key={id} className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                  style={{
+                    background: `${info.color}20`,
+                    border: `1px solid ${info.color}55`,
+                    color: info.color,
+                  }}>
+                  {info.icon} {info.name}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
       {/* XP */}
       <div className="text-right shrink-0">
@@ -296,6 +316,7 @@ export default function RankingPage() {
   const [charType, setCharType] = useState<CharacterType>('knight');
   const [mounted,  setMounted]  = useState(false);
   const [myRank,   setMyRank]   = useState(0);
+  const [myBadges, setMyBadges] = useState<BadgeId[]>([]);
 
   useEffect(() => {
     const p = getProfile();
@@ -324,6 +345,7 @@ export default function RankingPage() {
 
     setPlayers(all);
     setMyRank(all.findIndex(pl => pl.isMe) + 1);
+    setMyBadges(getBadges().map(b => b.id));
     setMounted(true);
   }, []);
 
@@ -446,7 +468,8 @@ export default function RankingPage() {
         {/* 4th and beyond */}
         <div className="px-4 space-y-2">
           {rest.map((p, i) => (
-            <RankRow key={p.id} rank={i + 4} player={p} isPrincess={isPrincess}/>
+            <RankRow key={p.id} rank={i + 4} player={p} isPrincess={isPrincess}
+              badges={p.isMe ? myBadges : undefined}/>
           ))}
         </div>
       </div>

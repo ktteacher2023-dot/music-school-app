@@ -13,6 +13,7 @@ import StarRating from '@/components/StarRating';
 import { getProfile, type CharacterType } from '@/lib/profile';
 import { getTheme } from '@/lib/theme';
 import { COMPANIONS } from '@/lib/companionData';
+import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/lib/badges';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -57,9 +58,115 @@ function fmtSize(b: number) {
   return `${(b/1024/1024).toFixed(1)}MB`;
 }
 
+// ─── Badge celebration overlay ────────────────────────────────────────────────
+function BadgeCelebration({ badgeId, charType, onClose }:
+  { badgeId: BadgeId; charType: CharacterType; onClose: () => void }) {
+  const isPrincess = charType === 'princess';
+  const info = getBadgeInfo(badgeId, charType);
+  useEffect(() => { const id = setTimeout(onClose, 4800); return () => clearTimeout(id); }, [onClose]);
+
+  const ptcls = isPrincess
+    ? ['✦','✧','⋆','✦','✧','⋆','✦','✧','✦','✧','⋆','✦','✧','✦','⋆','✧']
+    : ['🎨','💥','⚡','🔥','⭐','💫','✨','🌟','🎖️','👑','💛','🧡'];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(14px)' }}
+      onClick={onClose}>
+
+      {/* Particle burst */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {ptcls.map((p, i) => (
+          <div key={i}
+            className={`absolute select-none font-black ${isPrincess ? `pixie-${i + 1}` : `particle-${(i % 8) + 1}`}`}
+            style={{
+              fontSize: isPrincess ? 12 + (i % 3) * 7 : 22,
+              color: isPrincess
+                ? (['#FFD700','#C77DFF','#87CEEB','#FFB7C5'] as string[])[i % 4]
+                : (['#FF6B00','#FFD700','#7B00FF','white']    as string[])[i % 4],
+              textShadow: '0 0 14px currentColor',
+              animationDelay: `${i * 0.04}s`,
+            }}>
+            {p}
+          </div>
+        ))}
+        {/* Extra burst layer */}
+        {['✦','✧','⋆','✦','✧','⋆','✦','✧'].map((p, i) => (
+          <div key={`ex${i}`}
+            className={`absolute select-none particle-${(i % 8) + 1}`}
+            style={{
+              fontSize: 16,
+              color: info.color,
+              textShadow: `0 0 10px ${info.glow}`,
+              animationDelay: `${0.1 + i * 0.07}s`,
+            }}>
+            {p}
+          </div>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="animate-pop-in mx-7 rounded-3xl flex flex-col items-center gap-4 px-7 py-10 relative overflow-hidden"
+        style={isPrincess ? {
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.14), rgba(199,125,255,0.10))',
+          backdropFilter: 'blur(32px)',
+          border: `1px solid ${info.color}55`,
+          boxShadow: `0 0 80px ${info.glow}, 0 24px 80px rgba(0,0,0,0.5)`,
+        } : {
+          background: 'linear-gradient(135deg, rgba(10,6,30,0.97), rgba(20,10,50,0.97))',
+          border: `1px solid ${info.color}55`,
+          boxShadow: `0 0 80px ${info.glow}, 0 24px 80px rgba(0,0,0,0.7)`,
+        }}>
+        {/* Shimmer */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-y-0 w-1/3 bg-white/8 skew-x-12 animate-shimmer"/>
+        </div>
+        <span className="text-8xl relative z-10"
+          style={{ filter: `drop-shadow(0 0 28px ${info.glow})`, animation: 'floatBounce 1.2s ease-in-out infinite' }}>
+          {info.icon}
+        </span>
+        <div className="text-center relative z-10">
+          <p className="font-black text-[10px] tracking-[0.28em] uppercase mb-1"
+            style={{ color: `${info.color}88` }}>
+            NEW BADGE UNLOCKED!
+          </p>
+          <p className="font-black text-2xl leading-tight"
+            style={{ color: 'white', textShadow: `0 0 24px ${info.glow}` }}>
+            {info.name}
+          </p>
+          <p className="text-sm mt-1.5 font-bold" style={{ color: `${info.color}cc` }}>
+            {info.sub}
+          </p>
+        </div>
+        <p className="text-xs relative z-10" style={{ color: 'rgba(255,255,255,0.3)' }}>タップして閉じる</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Name plate ───────────────────────────────────────────────────────────────
-function NamePlate({ nickname, level, title, isPrincess, titleColor }:
-  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string }) {
+function BadgeChip({ badgeId, charType }: { badgeId: BadgeId; charType: CharacterType }) {
+  const info = getBadgeInfo(badgeId, charType);
+  const isPrincess = charType === 'princess';
+  return (
+    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full animate-sparkle"
+      style={isPrincess ? {
+        background: `${info.color}22`,
+        border: `1px solid ${info.color}66`,
+        boxShadow: `0 0 10px ${info.glow}`,
+      } : {
+        background: `${info.color}18`,
+        border: `1px solid ${info.color}55`,
+        boxShadow: `0 0 10px ${info.glow}`,
+      }}>
+      <span className="text-sm leading-none">{info.icon}</span>
+      <span className="text-[10px] font-black" style={{ color: info.color }}>{info.name}</span>
+    </div>
+  );
+}
+
+function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, charType }:
+  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string; badges: BadgeId[]; charType: CharacterType }) {
   if (!nickname) return null;
 
   if (isPrincess) {
@@ -123,6 +230,11 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor }:
                   Lv. {level}
                 </span>
               </div>
+              {badges.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {badges.map(id => <BadgeChip key={id} badgeId={id} charType={charType}/>)}
+                </div>
+              )}
             </div>
             {/* Right deco */}
             <div className="shrink-0 flex flex-col items-center gap-1">
@@ -195,6 +307,11 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor }:
                 {title}
               </span>
             </div>
+            {badges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {badges.map(id => <BadgeChip key={id} badgeId={id} charType={charType}/>)}
+              </div>
+            )}
           </div>
           {/* Right paint splat */}
           <div className="shrink-0 flex flex-col items-center gap-0.5">
@@ -704,6 +821,10 @@ export default function StudentPage() {
   const [hitFlash, setHitFlash] = useState(false);
   const [levelUpVal, setLevelUpVal] = useState<number|null>(null);
 
+  // badge celebration
+  const [newBadgeId, setNewBadgeId] = useState<BadgeId | null>(null);
+  const [myBadges,   setMyBadges]   = useState<BadgeId[]>([]);
+
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
 
@@ -726,6 +847,16 @@ export default function StudentPage() {
     setNickname(p.nickname ?? '');
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
+    // Load current badges; if expression badge was just awarded by teacher, celebrate
+    const currentBadges = getBadges().map(b => b.id);
+    setMyBadges(currentBadges);
+    const celebKey = 'badge_celebrated';
+    const celebrated = (localStorage.getItem(celebKey) ?? '').split(',').filter(Boolean);
+    const newOnes = currentBadges.filter(id => !celebrated.includes(id));
+    if (newOnes.length > 0) {
+      setNewBadgeId(newOnes[0] as BadgeId);
+      localStorage.setItem(celebKey, [...celebrated, ...newOnes].join(','));
+    }
   }, [load, router]);
 
   const theme   = getTheme(charType);
@@ -769,6 +900,18 @@ export default function StudentPage() {
       ? ms.streak + 1
       : ms.lastPracticeDate === today ? ms.streak : 1;
     const newStreakRecord = Math.max(ms.streakRecord, newStreak);
+
+    // ── Auto-award daily7 badge ──
+    if (newStreak >= 7 && !hasBadge('daily7')) {
+      const awarded = awardBadge('daily7');
+      if (awarded) {
+        setMyBadges(prev => [...prev, 'daily7']);
+        const celebKey = 'badge_celebrated';
+        const celebrated = (localStorage.getItem(celebKey) ?? '').split(',').filter(Boolean);
+        localStorage.setItem(celebKey, [...celebrated, 'daily7'].join(','));
+        setTimeout(() => setNewBadgeId('daily7'), 600);
+      }
+    }
 
     // ── Damage ──
     const baseDmg = Math.max(1, Math.floor(m * (rating / 3)));
@@ -845,6 +988,12 @@ export default function StudentPage() {
     <div className="min-h-screen relative" style={{ background: theme.bgPage }}>
 
       <BackgroundLayer isPrincess={isPrincess}/>
+
+      {/* Badge celebration */}
+      {newBadgeId && (
+        <BadgeCelebration badgeId={newBadgeId} charType={charType}
+          onClose={() => setNewBadgeId(null)}/>
+      )}
 
       {/* Level-up modal */}
       {levelUpVal && <LevelUpModal level={levelUpVal} onClose={() => setLevelUpVal(null)} charType={charType} />}
@@ -931,6 +1080,8 @@ export default function StudentPage() {
             title={title.title}
             isPrincess={isPrincess}
             titleColor={title.color}
+            badges={myBadges}
+            charType={charType}
           />
         )}
 

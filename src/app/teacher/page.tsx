@@ -5,6 +5,7 @@ import { Submission } from '@/types';
 import { getSubmissions, updateSubmission } from '@/lib/submissions';
 import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
+import { awardBadge, hasBadge } from '@/lib/badges';
 import type { MonsterState } from '@/app/student/page';
 import StarRating from '@/components/StarRating';
 
@@ -71,13 +72,16 @@ export default function TeacherPage() {
   const [stats,        setStats]        = useState<MonsterState | null>(null);
   const [profile,      setProfile]      = useState<Profile | null>(null);
   const [stampToast,   setStampToast]   = useState('');
-  const [xpGranted,    setXpGranted]    = useState(false);
+  const [xpGranted,       setXpGranted]       = useState(false);
+  const [expressionGranted, setExpressionGranted] = useState(false);
+  const [expressionAlready, setExpressionAlready] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setSubs(getSubmissions());
     setStats(loadMS());
     setProfile(getProfile());
+    setExpressionAlready(hasBadge('expression'));
   }, []);
 
   const reload = () => setSubs(getSubmissions());
@@ -115,6 +119,17 @@ export default function TeacherPage() {
     reload();
     setStampToast(`${emoji} ${label} を送信しました！`);
     setTimeout(() => setStampToast(''), 2500);
+  };
+
+  const handleExpressionAward = () => {
+    const awarded = awardBadge('expression');
+    if (awarded) {
+      setExpressionGranted(true);
+      setExpressionAlready(true);
+      setTimeout(() => setExpressionGranted(false), 3000);
+    } else {
+      setExpressionAlready(true);
+    }
   };
 
   const handleBonusXp = () => {
@@ -260,7 +275,7 @@ export default function TeacherPage() {
                 </div>
               )}
 
-              {/* Bonus XP */}
+              {/* Bonus XP + Award buttons */}
               <div className="px-4 pb-3 space-y-2">
                 <button onClick={handleBonusXp}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#5856D6] to-[#007AFF] text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
@@ -272,6 +287,34 @@ export default function TeacherPage() {
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     <span className="text-xs text-[#34C759] font-semibold">ボーナス +50 XP を付与しました！</span>
+                  </div>
+                )}
+
+                {/* Expression award */}
+                <button onClick={handleExpressionAward} disabled={expressionAlready}
+                  className="w-full py-2.5 rounded-xl text-sm font-bold active:scale-[0.98] transition-all shadow-sm disabled:opacity-50"
+                  style={expressionAlready ? {
+                    background: 'linear-gradient(90deg,#A0A0A0,#C0C0C0)',
+                    color: 'white',
+                  } : {
+                    background: 'linear-gradient(90deg,#FF9F0A,#FF6B00)',
+                    color: 'white',
+                    boxShadow: '0 2px 12px rgba(255,107,0,0.4)',
+                  }}>
+                  {expressionAlready
+                    ? '🏆 表現力賞 授与済み'
+                    : profile?.type === 'princess'
+                      ? '👠 輝くガラスの靴（表現力賞）を贈る'
+                      : '🏆 黄金のインク瓶（表現力賞）を贈る'}
+                </button>
+                {expressionGranted && (
+                  <div className="flex items-center gap-2 bg-[#FF9F0A]/10 rounded-xl px-3 py-2 animate-pop-in">
+                    <span className="text-lg leading-none">
+                      {profile?.type === 'princess' ? '👠' : '🏆'}
+                    </span>
+                    <span className="text-xs text-[#FF9F0A] font-bold">
+                      表現力賞を贈りました！生徒のマイページに反映されます。
+                    </span>
                   </div>
                 )}
               </div>

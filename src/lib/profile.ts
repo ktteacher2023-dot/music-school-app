@@ -1,10 +1,16 @@
 export type CharacterType = 'knight' | 'princess';
 
+export interface BadgeRecord {
+  id: string;       // 'daily7' | 'expression'
+  awardedAt: number;
+}
+
 export interface Profile {
   nickname: string;
   birthday: string; // YYYY-MM-DD
   type: CharacterType;
   createdAt: number;
+  badges?: BadgeRecord[];
 }
 
 const KEY = 'student_profile_v1';
@@ -23,6 +29,13 @@ export function saveProfile(p: Omit<Profile, 'createdAt'> & { type: CharacterTyp
 
 export function clearProfile(): void {
   localStorage.removeItem(KEY);
+}
+
+/** Merge partial updates into the existing profile (preserves all other fields) */
+export function patchProfile(updates: Partial<Profile>): void {
+  const p = getProfile();
+  if (!p) return;
+  localStorage.setItem(KEY, JSON.stringify({ ...p, ...updates }));
 }
 
 // ─── Supabase 連携 ─────────────────────────────────────────────────────────────
