@@ -539,8 +539,10 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const [recVideoPreview, setRecVideoPreview] = useState<string | null>(null);
   const [savingRec,     setSavingRec]     = useState(false);
   const [savedRec,      setSavedRec]      = useState(false);
+  const [recError,      setRecError]      = useState('');
   const [deletingId,    setDeletingId]    = useState<string | null>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef    = useRef<HTMLInputElement>(null);
+  const libraryInputRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchLessonRecords(profile.nickname, profile.birthday).then(recs => {
@@ -557,29 +559,45 @@ function StudentDetailModal({ profile, stats, onClose }: {
   };
 
   const handleSaveRecord = async () => {
+    setRecError('');
     setSavingRec(true);
+
+    // 1. Upload video if selected
     let videoUrl: string | null = null;
     if (recVideoFile) {
       videoUrl = await uploadLessonVideo(recVideoFile, profile.nickname);
+      if (!videoUrl) {
+        setRecError('動画のアップロードに失敗しました。Storageバケット「lesson-records」が存在するか確認してください。');
+        setSavingRec(false);
+        return;
+      }
     }
+
+    // 2. Save record to DB
     const saved = await saveLessonRecord(
       profile.nickname, profile.birthday, recMemo, videoUrl,
     );
-    if (saved) {
-      setRecords(prev => [saved, ...prev]);
-      setRecMemo('');
-      setRecVideoFile(null);
-      setRecVideoPreview(null);
-      if (videoInputRef.current) videoInputRef.current.value = '';
-    }
     setSavingRec(false);
+
+    if (!saved) {
+      setRecError('DBへの保存に失敗しました。lesson_recordsテーブルが作成されているか確認してください。');
+      return;
+    }
+
+    // 3. Success — update list and clear form
+    setRecords(prev => [saved, ...prev]);
+    setRecMemo('');
+    setRecVideoFile(null);
+    setRecVideoPreview(null);
+    if (videoInputRef.current)   videoInputRef.current.value = '';
+    if (libraryInputRef.current) libraryInputRef.current.value = '';
     setSavedRec(true);
-    setTimeout(() => setSavedRec(false), 2500);
+    setTimeout(() => setSavedRec(false), 3000);
   };
 
   const handleDeleteRecord = async (rec: LessonRecord) => {
     setDeletingId(rec.id);
-    await deleteLessonRecord(rec.id, rec.video_url, profile.nickname);
+    await deleteLessonRecord(rec.id, rec.video_url);
     setRecords(prev => prev.filter(r => r.id !== rec.id));
     setDeletingId(null);
   };
@@ -945,7 +963,8 @@ function StudentDetailModal({ profile, stats, onClose }: {
               }}
             />
 
-            {/* Video select button */}
+            {/* Hidden file inputs */}
+            {/* Camera input */}
             <input
               ref={videoInputRef}
               type="file"
@@ -954,36 +973,97 @@ function StudentDetailModal({ profile, stats, onClose }: {
               className="hidden"
               onChange={handleVideoSelect}
             />
-            <button
-              onClick={() => videoInputRef.current?.click()}
-              className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-              style={isPrincess ? {
-                background: 'rgba(199,125,255,0.12)',
-                color: '#9B4DCA',
-                border: '1.5px dashed rgba(199,125,255,0.5)',
-              } : {
-                background: 'rgba(0,200,255,0.08)',
-                color: '#00C6FF',
-                border: '1.5px dashed rgba(0,200,255,0.35)',
-              }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-              </svg>
-              {recVideoFile ? recVideoFile.name : (isPrincess ? '✦ 演奏動画を選ぶ（カメラ or ライブラリ）' : '▸ 映像ファイルを選択')}
-            </button>
+            {/* Library input — no capture, allows picking from files/photos */}
+            <input
+              ref={libraryInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={handleVideoSelect}
+            />
+
+            {/* Two buttons: camera + library */}
+            {!recVideoFile ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  className="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
+                  style={isPrincess ? {
+                    background: 'rgba(199,125,255,0.12)',
+                    color: '#9B4DCA',
+                    border: '1.5px dashed rgba(199,125,255,0.5)',
+                  } : {
+                    background: 'rgba(0,200,255,0.08)',
+                    color: '#00C6FF',
+                    border: '1.5px dashed rgba(0,200,255,0.35)',
+                  }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  カメラで撮影
+                </button>
+                <button
+                  onClick={() => libraryInputRef.current?.click()}
+                  className="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
+                  style={isPrincess ? {
+                    background: 'rgba(199,125,255,0.12)',
+                    color: '#9B4DCA',
+                    border: '1.5px dashed rgba(199,125,255,0.5)',
+                  } : {
+                    background: 'rgba(0,200,255,0.08)',
+                    color: '#00C6FF',
+                    border: '1.5px dashed rgba(0,200,255,0.35)',
+                  }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                  </svg>
+                  ライブラリから選択
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2"
+                style={isPrincess ? {
+                  background: 'rgba(199,125,255,0.08)',
+                  border: '1px solid rgba(199,125,255,0.3)',
+                } : {
+                  background: 'rgba(0,200,255,0.06)',
+                  border: '1px solid rgba(0,200,255,0.25)',
+                }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                  style={{ color: isPrincess ? '#9B4DCA' : '#00C6FF', flexShrink: 0 }}>
+                  <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                </svg>
+                <span className="text-xs font-semibold truncate flex-1"
+                  style={{ color: isPrincess ? '#9B4DCA' : '#00C6FF' }}>
+                  {recVideoFile.name}
+                </span>
+                <button
+                  onClick={() => { setRecVideoFile(null); setRecVideoPreview(null); if (videoInputRef.current) videoInputRef.current.value = ''; if (libraryInputRef.current) libraryInputRef.current.value = ''; }}
+                  className="shrink-0 opacity-60 hover:opacity-100">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isPrincess ? '#9B4DCA' : '#FF3B30'} strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {/* Video preview */}
             {recVideoPreview && (
               <div className="relative rounded-xl overflow-hidden bg-black">
                 <video src={recVideoPreview} controls playsInline
                   className="w-full max-h-48 object-contain" />
-                <button
-                  onClick={() => { setRecVideoFile(null); setRecVideoPreview(null); if (videoInputRef.current) videoInputRef.current.value = ''; }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
+              </div>
+            )}
+
+            {/* Error message */}
+            {recError && (
+              <div className="flex items-start gap-2 rounded-xl px-3 py-2.5"
+                style={{ background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.25)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5" strokeLinecap="round" className="shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p className="text-xs text-[#FF3B30] font-semibold leading-snug">{recError}</p>
               </div>
             )}
 
