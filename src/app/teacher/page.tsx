@@ -29,9 +29,11 @@ const STAMPS = [
 ];
 
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
 }
+
+const MUSIC_GAME_KEY  = 'music_quiz_last_played';
+const MELODY_GAME_KEY = 'melody_quiz_last_played';
 
 function daysSince(dateStr: string): number {
   if (!dateStr) return 999;
@@ -84,6 +86,7 @@ export default function TeacherPage() {
   const [expressionGranted, setExpressionGranted] = useState(false);
   const [expressionAlready, setExpressionAlready] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [gameResetDone,     setGameResetDone]     = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
   const [showSettings,      setShowSettings]      = useState(false);
   const [showStudentDetail, setShowStudentDetail] = useState(false);
@@ -180,6 +183,26 @@ export default function TeacherPage() {
     setStats({ ...s });
     setXpGranted(true);
     setTimeout(() => setXpGranted(false), 2500);
+  };
+
+  const handleResetGameState = () => {
+    const nick = profile?.nickname ?? '';
+    // Clear both old (device-scoped) and new (student-scoped) game keys
+    localStorage.removeItem(MUSIC_GAME_KEY);
+    localStorage.removeItem(MELODY_GAME_KEY);
+    if (nick) {
+      localStorage.removeItem(`${MUSIC_GAME_KEY}_${nick}`);
+      localStorage.removeItem(`${MELODY_GAME_KEY}_${nick}`);
+    }
+    // Also reset last_game_at in Supabase so cross-device sync is clean
+    if (supabase && profile) {
+      supabase.from('profiles')
+        .update({ last_game_at: null })
+        .match({ nickname: profile.nickname, birthday: profile.birthday })
+        .then(() => {}, () => {});
+    }
+    setGameResetDone(true);
+    setTimeout(() => setGameResetDone(false), 3000);
   };
 
   return (
@@ -388,6 +411,20 @@ export default function TeacherPage() {
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     <span className="text-xs text-[#34C759] font-semibold">ボーナス +50 XP を付与しました！</span>
+                  </div>
+                )}
+
+                {/* Game state reset (for testing / timezone recovery) */}
+                <button onClick={handleResetGameState}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FF9F0A] to-[#FF6B00] text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
+                  🔄 今日のゲーム制限をリセット
+                </button>
+                {gameResetDone && (
+                  <div className="flex items-center gap-2 bg-[#FF9F0A]/10 rounded-xl px-3 py-2 animate-pop-in">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" strokeWidth="2.5" strokeLinecap="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span className="text-xs text-[#FF9F0A] font-semibold">ゲーム制限をリセットしました！</span>
                   </div>
                 )}
 

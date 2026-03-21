@@ -52,8 +52,8 @@ function saveMS(s: MonsterState) { localStorage.setItem(MS_KEY, JSON.stringify(s
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  // Always use Japan Standard Time (UTC+9) regardless of device timezone
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
 }
 function dateJP(s: string) {
   const d = new Date(s+'T00:00:00');
@@ -1306,10 +1306,13 @@ export default function StudentPage() {
   // melody quiz game
   const [showMelodyGame, setShowMelodyGame] = useState(false);
   // ── game-played flags: computed fresh every render from localStorage ──────
+  // Keys are student-scoped to prevent one student's play blocking another on shared devices
+  const musicGameKey  = nickname ? `${MUSIC_GAME_KEY}_${nickname}`  : MUSIC_GAME_KEY;
+  const melodyGameKey = nickname ? `${MELODY_GAME_KEY}_${nickname}` : MELODY_GAME_KEY;
   // Using state as a tick counter so handlers can force a re-render after writing localStorage
   const [gameTick, setGameTick] = useState(0);
-  const gamePlayedToday   = mounted ? localStorage.getItem(MUSIC_GAME_KEY)  === today : false;
-  const melodyPlayedToday = mounted ? localStorage.getItem(MELODY_GAME_KEY) === today : false;
+  const gamePlayedToday   = mounted ? localStorage.getItem(musicGameKey)  === today : false;
+  const melodyPlayedToday = mounted ? localStorage.getItem(melodyGameKey) === today : false;
   void gameTick; // consumed only to trigger re-render
   // treasure videos (teacher lesson records)
   const [treasureRecs,     setTreasureRecs]     = useState<LessonRecord[]>([]);
@@ -1339,6 +1342,17 @@ export default function StudentPage() {
     setAvatarUrl(p.avatar_url ?? null);
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
+    // Debug: log date comparison values so timezone issues can be spotted in DevTools
+    const dbgToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+    const dbgNick  = p.nickname ?? '';
+    const dbgMusicKey  = dbgNick ? `${MUSIC_GAME_KEY}_${dbgNick}`  : MUSIC_GAME_KEY;
+    const dbgMelodyKey = dbgNick ? `${MELODY_GAME_KEY}_${dbgNick}` : MELODY_GAME_KEY;
+    console.log(
+      '[GameDebug] today(JST):', dbgToday,
+      '| music_stored:', localStorage.getItem(dbgMusicKey),
+      '| melody_stored:', localStorage.getItem(dbgMelodyKey),
+      '| nick:', dbgNick,
+    );
     // gamePlayedToday / melodyPlayedToday are now computed directly from localStorage each render
     // Load current badges; if expression badge was just awarded by teacher, celebrate
     const currentBadges = getBadges().map(b => b.id);
@@ -1501,7 +1515,7 @@ export default function StudentPage() {
   const handleGameEnd = (expGained: number) => {
     setShowMusicGame(false);
     // Mark today as played (localStorage + Supabase)
-    localStorage.setItem(MUSIC_GAME_KEY, today);
+    localStorage.setItem(musicGameKey, today);
     setGameTick(t => t + 1); // force re-render so gamePlayedToday re-reads localStorage
     if (supabase) {
       const p = getProfile();
@@ -1525,7 +1539,7 @@ export default function StudentPage() {
   // Melody game end handler (same EXP logic as handleGameEnd)
   const handleMelodyGameEnd = (expGained: number) => {
     setShowMelodyGame(false);
-    localStorage.setItem(MELODY_GAME_KEY, today);
+    localStorage.setItem(melodyGameKey, today);
     setGameTick(t => t + 1); // force re-render so melodyPlayedToday re-reads localStorage
     if (expGained <= 0) return;
     const newTotalXp = ms.totalXp + expGained;
