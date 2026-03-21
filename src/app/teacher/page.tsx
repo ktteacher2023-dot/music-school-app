@@ -12,8 +12,9 @@ import { uploadTeacherAvatar, getTeacherAvatarUrl } from '@/lib/avatar';
 import type { MonsterState } from '@/app/student/page';
 import StarRating from '@/components/StarRating';
 
-const ROLE_KEY = 'app_role';
-const MS_KEY   = 'monster_state_v2';
+const ROLE_KEY      = 'app_role';
+const MS_KEY        = 'monster_state_v2';
+const TEACHER_PW_KEY = 'teacher_password';
 
 const STAMPS = [
   { emoji: '⭐', label: 'すごいね！',    text: 'すごいね！とってもよくできました！この調子で続けよう！' },
@@ -80,6 +81,7 @@ export default function TeacherPage() {
   const [expressionAlready, setExpressionAlready] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
+  const [showSettings,     setShowSettings]      = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -178,6 +180,11 @@ export default function TeacherPage() {
   return (
     <div className="min-h-screen bg-[#F2F2F7]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
+      {/* ── Settings modal ── */}
+      {showSettings && (
+        <PasswordChangeSheet onClose={() => setShowSettings(false)} />
+      )}
+
       {/* ── Header ── */}
       <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-10 border-b border-[#C6C6C8]/60"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -200,13 +207,22 @@ export default function TeacherPage() {
               </span>
             )}
           </div>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F2F2F7] active:bg-[#E5E5EA] transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2" strokeLinecap="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-            </svg>
-            <span className="text-xs text-[#6C6C70] font-medium">ログアウト</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowSettings(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#F2F2F7] active:bg-[#E5E5EA] transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6C70" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+            <button onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F2F2F7] active:bg-[#E5E5EA] transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2" strokeLinecap="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+              </svg>
+              <span className="text-xs text-[#6C6C70] font-medium">ログアウト</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -465,6 +481,197 @@ export default function TeacherPage() {
           )}
         </section>
 
+      </div>
+    </div>
+  );
+}
+
+// ─── Password change sheet ─────────────────────────────────────────────────────
+function PasswordChangeSheet({ onClose }: { onClose: () => void }) {
+  const [currentPw,  setCurrentPw]  = useState('');
+  const [newPw,      setNewPw]      = useState('');
+  const [confirmPw,  setConfirmPw]  = useState('');
+  const [showCur,    setShowCur]    = useState(false);
+  const [showNew,    setShowNew]    = useState(false);
+  const [showConf,   setShowConf]   = useState(false);
+  const [error,      setError]      = useState('');
+  const [success,    setSuccess]    = useState(false);
+  const [loading,    setLoading]    = useState(false);
+
+  const hasPassword = typeof window !== 'undefined' && !!localStorage.getItem(TEACHER_PW_KEY);
+
+  const handleSubmit = async () => {
+    setError('');
+    if (hasPassword) {
+      const stored = localStorage.getItem(TEACHER_PW_KEY) ?? '';
+      if (currentPw !== stored) {
+        setError('現在のパスワードが違います ✗');
+        return;
+      }
+    }
+    if (newPw.length < 4) {
+      setError('パスワードは4文字以上にしてください');
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setError('新しいパスワードが一致しません ✗');
+      return;
+    }
+    setLoading(true);
+    try {
+      localStorage.setItem(TEACHER_PW_KEY, newPw);
+      if (supabase) {
+        try { await supabase.auth.updateUser({ password: newPw }); }
+        catch (e) { console.warn('[auth] updateUser:', e); }
+      }
+      setSuccess(true);
+      setTimeout(onClose, 3200);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const EyeIcon = ({ open }: { open: boolean }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2" strokeLinecap="round">
+      {open
+        ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+        : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+      }
+    </svg>
+  );
+
+  const PwField = ({ label, value, onChange, show, onToggle, placeholder }: {
+    label: string; value: string; onChange: (v: string) => void;
+    show: boolean; onToggle: () => void; placeholder: string;
+  }) => (
+    <div className="space-y-1.5">
+      <label className="text-xs font-bold text-[#6C6C70] uppercase tracking-wide">{label}</label>
+      <div className="flex items-center bg-[#F2F2F7] rounded-xl overflow-hidden">
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="new-password"
+          className="flex-1 bg-transparent px-3.5 py-3 text-[#1C1C1E] placeholder-[#C7C7CC] outline-none text-sm"
+        />
+        <button type="button" onClick={onToggle}
+          className="px-3 h-full flex items-center active:opacity-60 transition-opacity">
+          <EyeIcon open={show} />
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+
+      <div className="bg-white w-full max-w-lg rounded-t-3xl px-5 pt-5 pb-10 space-y-5 animate-pop-in"
+        style={{ animationDuration: '0.25s' }}>
+
+        {/* Handle */}
+        <div className="w-10 h-1 bg-[#C7C7CC] rounded-full mx-auto"/>
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-black tracking-[0.2em] uppercase text-[#8E8E93]">SETTINGS</p>
+            <h2 className="text-xl font-black text-[#1C1C1E]">秘密の合言葉を変える</h2>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center active:bg-[#E5E5EA]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6C70" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Success state */}
+        {success ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-3 animate-pop-in">
+            <div className="relative">
+              <span className="text-6xl">🔐</span>
+              {['✨','⭐','✦','💫','✧'].map((s, i) => (
+                <span key={i} className="absolute text-lg select-none pointer-events-none"
+                  style={{
+                    top: `${['-30%','60%','-20%','55%','30%'][i]}`,
+                    left: `${['80%','95%','-40%','-35%','105%'][i]}`,
+                    color: ['#FFD700','#FF9F0A','#C77DFF','#007AFF','#34C759'][i],
+                    animation: `twinkle 1.2s ${i * 0.15}s ease-in-out infinite`,
+                  }}>
+                  {s}
+                </span>
+              ))}
+            </div>
+            <p className="font-black text-lg text-[#1C1C1E] text-center">合言葉の更新に成功しました！</p>
+            <p className="text-sm text-[#34C759] font-semibold">これからも安全に使えるよ ✓</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {hasPassword && (
+              <PwField
+                label="現在の合言葉"
+                value={currentPw}
+                onChange={setCurrentPw}
+                show={showCur}
+                onToggle={() => setShowCur(v => !v)}
+                placeholder="今のパスワードを入力"
+              />
+            )}
+            {!hasPassword && (
+              <div className="bg-[#007AFF]/8 rounded-xl px-3.5 py-2.5 flex items-center gap-2">
+                <span className="text-base">💡</span>
+                <p className="text-xs text-[#007AFF] font-semibold">
+                  まだパスワードが設定されていません。新しく作ってね！
+                </p>
+              </div>
+            )}
+            <PwField
+              label="新しい合言葉"
+              value={newPw}
+              onChange={setNewPw}
+              show={showNew}
+              onToggle={() => setShowNew(v => !v)}
+              placeholder="4文字以上"
+            />
+            <PwField
+              label="もう一度入力（確認）"
+              value={confirmPw}
+              onChange={setConfirmPw}
+              show={showConf}
+              onToggle={() => setShowConf(v => !v)}
+              placeholder="同じ合言葉をもう一度"
+            />
+
+            {/* Error */}
+            {error && (
+              <div className="bg-[#FF3B30]/8 rounded-xl px-3.5 py-2.5 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p className="text-xs text-[#FF3B30] font-semibold">{error}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !newPw || !confirmPw || (hasPassword && !currentPw)}
+              className="w-full py-3.5 rounded-2xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-40"
+              style={{
+                background: 'linear-gradient(90deg,#5856D6,#007AFF)',
+                color: 'white',
+                boxShadow: '0 4px 16px rgba(0,122,255,0.35)',
+              }}>
+              {loading ? '更新中…' : '合言葉を更新する 🔑'}
+            </button>
+
+            <p className="text-center text-[10px] text-[#C7C7CC]">
+              パスワードは●●●で隠されて保存されます
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
