@@ -147,6 +147,21 @@ function BadgeCelebration({ badgeId, charType, onClose }:
   );
 }
 
+// ─── Rank / Frame tier helpers ────────────────────────────────────────────────
+function getRankInfo(level: number) {
+  if (level >= 17) return { rank: 'S', bg: 'linear-gradient(135deg,#FFD700 0%,#FFFAAA 45%,#FF9500 70%,#FFD700 100%)', color: '#FFD700', glow: 'rgba(255,215,0,0.9)', borderColor: '#FFD700', label: 'SRANK', textColor: '#3d1a00' };
+  if (level >= 10) return { rank: 'A', bg: 'linear-gradient(135deg,#B0C4DE 0%,#FFFFFF 45%,#708090 70%,#C0C0C0 100%)', color: '#C8D8E8', glow: 'rgba(192,216,232,0.8)', borderColor: '#AACCDD', label: 'ARANK', textColor: '#1a2a3a' };
+  if (level >= 5)  return { rank: 'B', bg: 'linear-gradient(135deg,#4FC3F7 0%,#B3E5FC 45%,#0288D1 70%,#4FC3F7 100%)', color: '#4FC3F7', glow: 'rgba(79,195,247,0.7)', borderColor: '#29ABE2', label: 'BRANK', textColor: '#001a2e' };
+  return                 { rank: 'C', bg: 'linear-gradient(135deg,#CD7F32 0%,#E8AA76 45%,#8B4513 70%,#CD7F32 100%)', color: '#CD7F32', glow: 'rgba(205,127,50,0.65)', borderColor: '#B8680A', label: 'CRANK', textColor: '#1a0a00' };
+}
+
+function getFrameTier(level: number) {
+  if (level >= 17) return { grad: 'linear-gradient(135deg,#FFD700,#FFFFFF,#C77DFF,#87CEEB,#FFD700)', gems: ['💎','💎','💎','💎','💎','💎'], glow: 'rgba(255,215,0,0.85)', label: 'ダイヤモンドフレーム ✦', labelColor: '#C77DFF' };
+  if (level >= 10) return { grad: 'linear-gradient(135deg,#FFD700,#FFF7AA,#FF9500,#FFD700)',         gems: ['💛','💛','💛','💛'],         glow: 'rgba(255,200,0,0.75)',  label: 'ゴールドフレーム ✦',       labelColor: '#FFD700' };
+  if (level >= 5)  return { grad: 'linear-gradient(135deg,#C0C0C0,#FFFFFF,#A0A0A0,#C0C0C0)',         gems: ['🩶','🩶'],                   glow: 'rgba(192,192,192,0.6)', label: 'シルバーフレーム',          labelColor: '#B0C4DE' };
+  return                 { grad: 'linear-gradient(135deg,#CD7F32,#E8AA76,#A0522D,#CD7F32)',           gems: [],                           glow: 'rgba(170,100,30,0.5)',  label: 'ブロンズフレーム',          labelColor: '#CD7F32' };
+}
+
 // ─── Name plate ───────────────────────────────────────────────────────────────
 function BadgeChip({ badgeId, charType }: { badgeId: BadgeId; charType: CharacterType }) {
   const info = getBadgeInfo(badgeId, charType);
@@ -168,23 +183,27 @@ function BadgeChip({ badgeId, charType }: { badgeId: BadgeId; charType: Characte
   );
 }
 
-function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, charType, avatarUrl, onAvatarUpload }:
-  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string; badges: BadgeId[]; charType: CharacterType; avatarUrl: string | null; onAvatarUpload: (f: File) => Promise<void>; }) {
+function NamePlate({ nickname, level, title, titleIcon, isPrincess, titleColor, badges, charType, avatarUrl, onAvatarUpload }:
+  { nickname:string; level:number; title:string; titleIcon:string; isPrincess:boolean; titleColor:string; badges: BadgeId[]; charType: CharacterType; avatarUrl: string | null; onAvatarUpload: (f: File) => Promise<void>; }) {
   if (!nickname) return null;
 
   if (isPrincess) {
+    const tier = getFrameTier(level);
     return (
-      <div className="relative mx-0 overflow-visible animate-pop-in"
-        style={{ animationDuration: '0.5s' }}>
-        {/* Outer glow */}
+      <div className="relative mx-0 overflow-visible animate-pop-in" style={{ animationDuration: '0.5s' }}>
+        {/* Outer glow matching tier */}
         <div className="absolute inset-0 rounded-3xl pointer-events-none"
-          style={{ boxShadow:'0 0 32px rgba(199,125,255,0.3), 0 0 64px rgba(135,206,235,0.15)' }}/>
-        <div className="rounded-3xl px-5 py-4 relative overflow-hidden"
+          style={{ boxShadow:`0 0 40px ${tier.glow}, 0 0 80px rgba(199,125,255,0.15)` }}/>
+        <div className="rounded-3xl px-4 py-4 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(220,180,255,0.14) 100%)',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(220,180,255,0.16) 100%)',
             backdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,215,0,0.35)',
+            border: `2px solid transparent`,
+            backgroundClip: 'padding-box',
           }}>
+          {/* Tier frame border overlay */}
+          <div className="absolute inset-0 rounded-3xl pointer-events-none"
+            style={{ background: tier.grad, WebkitMask:'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px' }}/>
           {/* Corner sparkles */}
           {[
             { top:6,  left:10,  sz:14, d:'0s',    c:'#FFD700' },
@@ -203,21 +222,35 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
           </div>
 
           <div className="relative flex items-center gap-3">
-            {/* Princess avatar – magic mirror frame */}
+            {/* Princess avatar with tier gems */}
             <div className="relative shrink-0">
               <AvatarUploader
                 currentUrl={avatarUrl}
                 onUpload={onAvatarUpload}
                 isPrincess={true}
-                size={52}
+                size={56}
                 shape="circle"
                 defaultContent={<span className="text-2xl leading-none">🌸</span>}
               />
-              {/* Corner sparkles outside frame */}
+              {/* Tier frame ring */}
+              <div className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ background: tier.grad, WebkitMask:'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'3px' }}/>
+              {/* Gems orbiting avatar at higher tiers */}
+              {tier.gems.slice(0,4).map((gem, i) => {
+                const angles = [-35, 35, 215, 145];
+                const angle = angles[i] * Math.PI / 180;
+                const r = 34;
+                return (
+                  <span key={i} className="absolute select-none pointer-events-none text-xs"
+                    style={{ left: 28 + r * Math.cos(angle), top: 28 + r * Math.sin(angle), transform:'translate(-50%,-50%)', animation:`gemSparkle ${1.2+i*0.3}s ${i*0.2}s ease-in-out infinite` }}>
+                    {gem}
+                  </span>
+                );
+              })}
+              {/* Corner magic sparkles */}
               {[
-                { top: -6, left: -4, c: '#FFD700', d: '0s',   f: 10 },
-                { top: -6, right: -4, c: '#C77DFF', d: '0.5s', f: 8 },
-                { bottom: -5, left: -4, c: '#87CEEB', d: '1s', f: 7 },
+                { top: -8, left: -4, c: '#FFD700', d: '0s',   f: 10 },
+                { top: -8, right: -4, c: '#C77DFF', d: '0.5s', f: 8 },
               ].map((s, i) => (
                 <span key={i} className="absolute select-none pointer-events-none"
                   style={{ ...s, fontSize: s.f, color: s.c, animation: `twinkle 2.2s ${s.d} ease-in-out infinite` }}>
@@ -225,30 +258,35 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
                 </span>
               ))}
             </div>
+
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-black tracking-[0.2em] uppercase"
-                style={{ color:'rgba(199,125,255,0.7)' }}>
-                ✦ Welcome Back ✦
+              {/* Frame tier label */}
+              <p className="text-[10px] font-black tracking-[0.18em]"
+                style={{ color: tier.labelColor, animation:'twinkle 3s ease-in-out infinite' }}>
+                ✦ {tier.label} ✦
               </p>
               <p className="font-black leading-tight"
                 style={{
-                  fontSize: nickname.length > 6 ? 22 : 26,
+                  fontSize: nickname.length > 6 ? 20 : 24,
                   background: 'linear-gradient(90deg,#FFD700,#C77DFF,#87CEEB)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: 'none',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: 'none',
                 }}>
-                こんにちは、{nickname}ちゃん！
+                {nickname}ちゃん！
               </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-xs font-bold" style={{ color: titleColor }}>
-                  {title}
-                </span>
-                <span style={{ color:'rgba(199,125,255,0.3)' }}>·</span>
-                <span className="text-xs font-bold" style={{ color:'rgba(199,125,255,0.6)' }}>
-                  Lv. {level}
-                </span>
+              {/* Crystal level display */}
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+                  style={{ background:'linear-gradient(135deg,rgba(199,125,255,0.3),rgba(135,206,235,0.3))', border:`1px solid ${tier.labelColor}66`, boxShadow:`0 0 12px ${tier.glow}` }}>
+                  <span className="text-[10px]" style={{ animation:'crystalPulse 2s ease-in-out infinite', color: tier.labelColor }}>💎</span>
+                  <span className="text-[11px] font-black" style={{ color: tier.labelColor, animation:'crystalPulse 2s ease-in-out infinite' }}>Lv.{level}</span>
+                </div>
+                {/* Title badge */}
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+                  style={{ background:`${titleColor}20`, border:`1px solid ${titleColor}55`, boxShadow:`0 0 8px ${titleColor}44` }}>
+                  <span className="text-[11px] leading-none">{titleIcon}</span>
+                  <span className="text-[10px] font-black" style={{ color: titleColor }}>{title}</span>
+                </div>
               </div>
               {badges.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -256,10 +294,11 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
                 </div>
               )}
             </div>
-            {/* Right deco */}
+            {/* Right deco – tiara at high levels */}
             <div className="shrink-0 flex flex-col items-center gap-1">
-              <span className="text-2xl leading-none animate-sparkle">⭐</span>
-              <span className="text-xl leading-none" style={{ animation:'twinkle 1.8s 0.5s ease-in-out infinite' }}>✨</span>
+              <span className="text-2xl leading-none" style={{ animation:'floatBounce 2s ease-in-out infinite', filter:`drop-shadow(0 0 8px ${tier.glow})` }}>
+                {level >= 17 ? '👑' : level >= 10 ? '✨' : level >= 5 ? '⭐' : '🌸'}
+              </span>
             </div>
           </div>
         </div>
@@ -267,71 +306,77 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
     );
   }
 
-  // Knight – graffiti ink plate
+  // Knight – Splatoon ウデマエ rank plate
+  const rank = getRankInfo(level);
+  const inkOpacity = level >= 17 ? 0.55 : level >= 10 ? 0.42 : level >= 5 ? 0.32 : 0.22;
   return (
-    <div className="relative mx-0 overflow-visible animate-pop-in"
-      style={{ animationDuration: '0.5s' }}>
-      {/* Ink splash blobs behind plate */}
+    <div className="relative mx-0 overflow-visible animate-pop-in" style={{ animationDuration: '0.5s' }}>
+      {/* Ink splash blobs – intensity scales with rank */}
       <svg className="absolute pointer-events-none select-none"
-        width="100%" height="100%" style={{ top:-8, left:-6, overflow:'visible' }} aria-hidden>
-        <ellipse cx="12%" cy="50%" rx="18" ry="12" fill="#FF6B00" opacity="0.35" transform="rotate(-15,50,50)"/>
-        <ellipse cx="88%" cy="40%" rx="14" ry="9"  fill="#7B00FF" opacity="0.3"  transform="rotate(10,50,50)"/>
-        <ellipse cx="92%" cy="70%" rx="10" ry="7"  fill="#FF9F0A" opacity="0.28"/>
-        <circle cx="5%"  cy="25%" r="6"  fill="#FF3B30" opacity="0.25"/>
-        <circle cx="95%" cy="20%" r="8"  fill="#7B00FF" opacity="0.22"/>
-        <circle cx="50%" cy="92%" r="5"  fill="#FF6B00" opacity="0.2"/>
+        width="100%" height="100%" style={{ top:-10, left:-8, overflow:'visible' }} aria-hidden>
+        <ellipse cx="8%"  cy="50%" rx={16+level*0.8} ry={10+level*0.5} fill="#FF6B00" opacity={inkOpacity*1.3} transform="rotate(-20,50,50)"/>
+        <ellipse cx="88%" cy="35%" rx={12+level*0.6} ry={8+level*0.4}  fill="#7B00FF" opacity={inkOpacity}     transform="rotate(12,50,50)"/>
+        <ellipse cx="92%" cy="72%" rx={9+level*0.5}  ry={6+level*0.3}  fill="#FF9F0A" opacity={inkOpacity*0.9}/>
+        <circle  cx="4%"  cy="22%" r={5+level*0.3}  fill="#FF3B30" opacity={inkOpacity*0.85}/>
+        <circle  cx="96%" cy="18%" r={7+level*0.4}  fill="#7B00FF" opacity={inkOpacity*0.75}/>
+        {level >= 10 && <circle cx="50%" cy="95%" r="8" fill="#FFD700" opacity={inkOpacity*0.7}/>}
+        {level >= 17 && <>
+          <ellipse cx="50%" cy="5%" rx="20" ry="8" fill="#FFD700" opacity={inkOpacity*0.8}/>
+          <circle cx="15%" cy="80%" r="10" fill="#FF3B30" opacity={inkOpacity}/>
+        </>}
       </svg>
 
-      <div className="rounded-2xl px-5 py-4 relative overflow-hidden"
+      <div className="rounded-2xl px-4 py-3 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, rgba(10,6,30,0.96) 0%, rgba(20,10,50,0.96) 100%)',
-          border: '1px solid rgba(255,107,0,0.35)',
-          boxShadow: '0 4px 32px rgba(255,107,0,0.2), inset 0 1px 0 rgba(255,200,0,0.08)',
+          background: 'linear-gradient(135deg, rgba(8,4,22,0.97) 0%, rgba(15,8,40,0.97) 100%)',
+          border: `1.5px solid ${rank.borderColor}55`,
+          boxShadow: `0 4px 32px ${rank.glow.replace('0.9','0.3')}, inset 0 1px 0 rgba(255,200,0,0.06)`,
         }}>
-        {/* Diagonal stripes (stencil texture) */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl opacity-[0.04]"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(45deg, #FF6B00 0px, #FF6B00 2px, transparent 2px, transparent 12px)',
-          }}/>
-        {/* Orange glow line top */}
+        {/* Concrete texture */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl opacity-[0.035]"
+          style={{ backgroundImage:'repeating-linear-gradient(45deg,#FF6B00 0px,#FF6B00 2px,transparent 2px,transparent 14px)' }}/>
+        {/* Rank-colored glow line top */}
         <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background:'linear-gradient(90deg, transparent, #FF6B00, #FFD700, #FF6B00, transparent)' }}/>
+          style={{ background:`linear-gradient(90deg,transparent,${rank.color},#FFD700,${rank.color},transparent)` }}/>
 
         <div className="relative flex items-center gap-3">
-          {/* Knight avatar – ink-splashed frame */}
+          {/* Avatar */}
           <div className="relative shrink-0">
             <AvatarUploader
               currentUrl={avatarUrl}
               onUpload={onAvatarUpload}
               isPrincess={false}
-              size={48}
+              size={50}
               shape="rounded"
               defaultContent={<span className="text-2xl leading-none">🎮</span>}
             />
+            {/* Rank-colored border */}
+            <div className="absolute inset-0 rounded-xl pointer-events-none"
+              style={{ border:`2px solid ${rank.color}88`, boxShadow:`inset 0 0 12px ${rank.glow}` }}/>
           </div>
+
           {/* Text */}
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black tracking-[0.22em] uppercase"
-              style={{ color:'rgba(255,107,0,0.7)' }}>
+              style={{ color:`rgba(255,107,0,0.65)` }}>
               PLAYER
             </p>
             <p className="font-black leading-none truncate"
               style={{
-                fontSize: nickname.length > 6 ? 22 : 26,
+                fontSize: nickname.length > 6 ? 20 : 24,
                 color: 'white',
-                textShadow: '0 0 20px rgba(255,107,0,0.7), 0 2px 4px rgba(0,0,0,0.8)',
-                letterSpacing: '0.02em',
+                textShadow: `0 0 20px ${rank.glow}, 0 2px 4px rgba(0,0,0,0.9)`,
+                letterSpacing: '0.03em',
               }}>
               {nickname}
             </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                style={{ background:'rgba(255,107,0,0.2)', border:'1px solid rgba(255,107,0,0.4)', color:'#FF9F0A' }}>
-                Lv.{level}
-              </span>
-              <span className="text-[11px] font-bold" style={{ color: titleColor }}>
-                {title}
-              </span>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {/* Title adventurer badge */}
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md"
+                style={{ background:`${titleColor}18`, border:`1px solid ${titleColor}55`, boxShadow:`0 0 8px ${titleColor}44` }}>
+                <span className="text-[11px] leading-none">{titleIcon}</span>
+                <span className="text-[10px] font-black" style={{ color: titleColor }}>{title}</span>
+              </div>
             </div>
             {badges.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -339,10 +384,28 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
               </div>
             )}
           </div>
-          {/* Right paint splat */}
-          <div className="shrink-0 flex flex-col items-center gap-0.5">
-            <span className="text-2xl leading-none" style={{ filter:'drop-shadow(0 0 8px rgba(255,107,0,0.9))' }}>🎨</span>
-            <span className="text-xs font-black" style={{ color:'#FF9F0A' }}>READY</span>
+
+          {/* Rank plate – the MAIN attraction */}
+          <div className="shrink-0 flex flex-col items-center gap-0.5" style={{ minWidth: 56 }}>
+            <div className="relative flex items-center justify-center rounded-lg overflow-hidden"
+              style={{
+                width: 52, height: 52,
+                background: rank.bg,
+                boxShadow: `0 0 20px ${rank.glow}, 0 0 40px ${rank.glow.replace('0.9','0.5')}`,
+                border: `1px solid ${rank.color}99`,
+              }}>
+              {/* Inner shine */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute inset-y-0 w-1/3 bg-white/25 skew-x-12" style={{ animation:'shimmer 2.5s ease infinite' }}/>
+              </div>
+              <span className="relative font-black select-none"
+                style={{ fontSize: 26, color: rank.textColor, letterSpacing:'-0.02em', textShadow:`0 1px 4px rgba(0,0,0,0.3)` }}>
+                {rank.rank}
+              </span>
+            </div>
+            <span className="text-[9px] font-black tracking-widest" style={{ color: rank.color }}>
+              Lv.{level}
+            </span>
           </div>
         </div>
       </div>
@@ -714,111 +777,194 @@ function MonsterFace({ idx, hp, maxHp, shaking, defeated, charType, accentColor 
 function LevelUpModal({ level, onClose, charType }: { level: number; onClose: () => void; charType: CharacterType }) {
   const t = getTitle(level);
   const isPrincess = charType === 'princess';
-  useEffect(() => { const id = setTimeout(onClose, 4500); return () => clearTimeout(id); }, [onClose]);
+  const rank = getRankInfo(level);
+  const tier = getFrameTier(level);
+  useEffect(() => { const id = setTimeout(onClose, 5200); return () => clearTimeout(id); }, [onClose]);
 
-  // Knight: 12 battle particles (pb1–pb8 cycling)
+  // Knight: ink explosion particles
   const knightPtcls = ['⚔️','💥','🔥','👑','⚡','🏆','💫','🛡️','🐉','🎖️','✨','🌟'];
-  // Princess: 16 pixie dust particles (pd1–pd16)
+  // Princess: 16 pixie dust particles
   const pixiePtcls  = ['✦','✧','⋆','✦','✧','⋆','✦','✧','✦','✧','⋆','✦','✧','✦','⋆','✧'];
   const pixieColors = ['#FFD700','#C77DFF','#87CEEB','#FFB7C5','#FFD700','#C77DFF','#87CEEB',
                        '#FFB7C5','#FFD700','#C77DFF','#87CEEB','#FFB7C5','#FFD700','#C77DFF','#87CEEB','#FFB7C5'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: isPrincess ? 'rgba(20,0,40,0.85)' : 'rgba(0,0,0,0.82)', backdropFilter:'blur(10px)' }}
+      style={{ background: isPrincess ? 'rgba(15,0,35,0.88)' : 'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)' }}
       onClick={onClose}>
 
-      {/* Particles */}
+      {/* ── Particles ── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {isPrincess ? (
-          // 16 pixie dust sparks
           <>
             {pixiePtcls.map((p, i) => (
               <div key={i} className={`absolute font-black select-none pixie-${i+1}`}
-                style={{
-                  fontSize: 14 + (i % 3) * 6,
-                  color: pixieColors[i],
-                  textShadow: `0 0 12px ${pixieColors[i]}`,
-                  animationDelay: `${i * 0.04}s`,
-                }}>
+                style={{ fontSize: 14+(i%3)*8, color: pixieColors[i], textShadow:`0 0 16px ${pixieColors[i]}`, animationDelay:`${i*0.04}s` }}>
                 {p}
               </div>
             ))}
-            {/* Extra ambient twinkles */}
             {['✦','✧','⋆','✦','✧','⋆','✦','✧'].map((p,i) => (
               <div key={`ex${i}`} className={`absolute select-none particle-${(i%8)+1}`}
-                style={{
-                  fontSize: 10, color: pixieColors[i*2 % 16], opacity: 0.6,
-                  animationDelay: `${0.15 + i*0.06}s`,
-                }}>
+                style={{ fontSize:12, color: pixieColors[i*2%16], opacity:0.7, animationDelay:`${0.2+i*0.07}s` }}>
                 {p}
               </div>
             ))}
           </>
         ) : (
-          knightPtcls.map((p, i) => (
-            <div key={i} className={`absolute text-2xl select-none particle-${(i%8)+1}`}
-              style={{ animationDelay: `${i*0.06}s` }}>
-              {p}
-            </div>
-          ))
+          <>
+            {knightPtcls.map((p, i) => (
+              <div key={i} className={`absolute text-3xl select-none particle-${(i%8)+1}`}
+                style={{ animationDelay:`${i*0.06}s`, filter:`drop-shadow(0 0 12px ${rank.color})` }}>
+                {p}
+              </div>
+            ))}
+            {/* Extra ink splat circles */}
+            {[0,1,2,3,4,5,6,7].map(i => (
+              <div key={`ink${i}`} className={`absolute rounded-full particle-${i+1}`}
+                style={{
+                  width: 18+i*4, height: 18+i*4,
+                  background: [rank.color,'#FF6B00','#FFD700','#7B00FF','#FF3B30','#FF9F0A',rank.color,'#FFD700'][i],
+                  opacity: 0.55,
+                  animationDelay: `${0.1+i*0.05}s`,
+                }}/>
+            ))}
+          </>
         )}
       </div>
 
-      {/* Card */}
-      <div className="animate-pop-in mx-6 rounded-3xl flex flex-col items-center gap-3 relative overflow-hidden"
+      {/* ── Main Card ── */}
+      <div className="animate-pop-in mx-5 rounded-3xl flex flex-col items-center gap-3 relative overflow-hidden"
         style={isPrincess ? {
-          padding: '40px 36px',
-          background: `linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08))`,
-          backdropFilter: 'blur(32px)',
-          border: `1px solid ${t.color}66`,
-          boxShadow: `0 0 80px ${t.color}60, 0 0 160px rgba(199,125,255,0.3), 0 24px 80px rgba(0,0,0,0.5)`,
+          padding: '36px 32px',
+          background: 'linear-gradient(135deg,rgba(255,255,255,0.18),rgba(220,180,255,0.12))',
+          backdropFilter: 'blur(40px)',
+          border: `2px solid transparent`,
+          backgroundClip: 'padding-box',
+          boxShadow: `0 0 80px ${tier.glow}, 0 0 160px rgba(199,125,255,0.3), 0 24px 80px rgba(0,0,0,0.55)`,
         } : {
-          padding: '40px 36px',
-          background: `linear-gradient(135deg, ${t.color}dd, ${t.color})`,
-          boxShadow: `0 0 80px ${t.color}88, 0 24px 80px rgba(0,0,0,0.6)`,
+          padding: '36px 28px',
+          background: 'linear-gradient(135deg,rgba(8,4,22,0.97),rgba(14,8,38,0.97))',
+          border: `2px solid ${rank.color}88`,
+          boxShadow: `0 0 80px ${rank.glow}, 0 0 160px ${rank.glow.replace('0.9','0.4')}, 0 24px 80px rgba(0,0,0,0.7)`,
         }}>
-        {/* Shimmer */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+
+        {/* Princess tier frame ring */}
+        {isPrincess && (
+          <div className="absolute inset-0 rounded-3xl pointer-events-none"
+            style={{ background: tier.grad, WebkitMask:'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px' }}/>
+        )}
+
+        {/* Shimmer sweep */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
           <div className="absolute inset-y-0 w-1/3 bg-white/10 skew-x-12 animate-shimmer"/>
         </div>
+
+        {/* Princess inner sparkles */}
         {isPrincess && (
-          // Pixie dust inner sparkles
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {['✦','✧','⋆','✦','✧','⋆'].map((s,i) => (
-              <span key={i} className="absolute text-xs" style={{
-                color: pixieColors[i*2],
-                left: `${15+i*14}%`, top: `${10+i*12}%`,
-                animation: `twinkle ${1.5+i*0.3}s ${i*0.2}s ease-in-out infinite`,
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+            {['✦','✧','⋆','✦','✧','⋆','✦','✧'].map((s,i) => (
+              <span key={i} className="absolute" style={{
+                color: pixieColors[i*2], fontSize: 10,
+                left:`${8+i*12}%`, top:`${8+i*11}%`,
+                animation:`twinkle ${1.4+i*0.25}s ${i*0.18}s ease-in-out infinite`,
               }}>{s}</span>
             ))}
           </div>
         )}
+
+        {/* Knight: ink splat background blobs */}
+        {!isPrincess && (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden>
+            <ellipse cx="15%" cy="20%" rx="40" ry="28" fill={rank.color} opacity="0.08" transform="rotate(-20,50,50)"/>
+            <ellipse cx="85%" cy="80%" rx="35" ry="22" fill="#7B00FF"   opacity="0.08" transform="rotate(15,50,50)"/>
+            <ellipse cx="80%" cy="25%" rx="25" ry="16" fill="#FF6B00"   opacity="0.06"/>
+          </svg>
+        )}
+
+        {/* Title icon */}
         <span className="text-7xl relative z-10"
-          style={{ filter:`drop-shadow(0 0 24px ${isPrincess ? t.color : 'rgba(255,255,255,0.8)'})` }}>
+          style={{ filter:`drop-shadow(0 0 32px ${isPrincess ? tier.glow : rank.glow})`, animation:'floatBounce 1s ease-in-out infinite' }}>
           {t.icon}
         </span>
-        <p className="relative z-10 font-black text-5xl drop-shadow"
-          style={{
-            color: 'white',
-            letterSpacing: '0.06em',
-            textShadow: isPrincess ? `0 0 30px ${t.color}, 0 2px 8px rgba(0,0,0,0.4)` : undefined,
-          }}>
-          {isPrincess ? '✨ LEVEL UP ✨' : 'LEVEL UP!'}
-        </p>
-        <p className="relative z-10 font-bold text-2xl" style={{ color: isPrincess ? t.color : 'rgba(255,255,255,0.9)' }}>
-          Lv. {level}
-        </p>
-        <div className="relative z-10 rounded-2xl px-6 py-2"
+
+        {/* Knight: GRAFFITI "LEVEL UP!" text */}
+        {!isPrincess ? (
+          <div className="relative z-10 flex flex-col items-center gap-1" style={{ animation:'graffitiIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>
+            <p className="font-black leading-none"
+              style={{
+                fontSize: 52,
+                letterSpacing: '0.04em',
+                color: rank.color,
+                textShadow: `0 0 40px ${rank.glow}, 0 0 80px ${rank.glow.replace('0.9','0.5')}, 0 4px 0 rgba(0,0,0,0.8), -2px 2px 0 ${rank.textColor === '#3d1a00' ? '#7B4400' : 'rgba(0,0,0,0.5)'}`,
+                WebkitTextStroke: `1px ${rank.color}cc`,
+              }}>
+              LEVEL UP!
+            </p>
+            {/* Ink drips under text */}
+            <div className="flex gap-2 pointer-events-none select-none">
+              {[rank.color,'#FF6B00','#FFD700','#7B00FF',rank.color].map((c,i) => (
+                <div key={i} className="w-1 rounded-b-full"
+                  style={{ height: 8+i*5, background:c, opacity:0.7, animation:`inkDrip 0.4s ${0.6+i*0.1}s ease-out both` }}/>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="relative z-10 font-black text-5xl"
+            style={{
+              letterSpacing:'0.05em',
+              background: `linear-gradient(90deg,#FFD700,${tier.labelColor},#87CEEB,${tier.labelColor},#FFD700)`,
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+              textShadow:'none',
+              animation:'graffitiIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards',
+            }}>
+            ✨ LEVEL UP ✨
+          </p>
+        )}
+
+        {/* Level number with rank/crystal display */}
+        {!isPrincess ? (
+          <div className="relative z-10 flex items-center gap-2.5 px-4 py-2 rounded-xl"
+            style={{ background: rank.bg, boxShadow:`0 0 24px ${rank.glow}, 0 0 48px ${rank.glow.replace('0.9','0.5')}`, border:`1px solid ${rank.color}88` }}>
+            <span className="font-black text-3xl" style={{ color: rank.textColor, letterSpacing:'-0.02em' }}>
+              {rank.rank}
+            </span>
+            <div className="flex flex-col leading-none">
+              <span className="text-[10px] font-black" style={{ color:`${rank.textColor}88` }}>ランク</span>
+              <span className="font-black text-xl" style={{ color: rank.textColor }}>Lv.{level}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="relative z-10 flex items-center gap-2 px-4 py-2 rounded-full"
+            style={{ background: tier.grad, boxShadow:`0 0 24px ${tier.glow}, 0 0 48px ${tier.glow}`, border:`1px solid rgba(255,255,255,0.3)` }}>
+            <span className="text-lg" style={{ animation:'gemSparkle 1.5s ease-in-out infinite' }}>💎</span>
+            <span className="font-black text-2xl text-white" style={{ textShadow:`0 0 16px ${tier.glow}` }}>Lv.{level}</span>
+          </div>
+        )}
+
+        {/* Frame tier evolution (princess) */}
+        {isPrincess && tier.gems.length > 0 && (
+          <div className="relative z-10 flex items-center gap-1.5 px-4 py-1.5 rounded-full"
+            style={{ background:`${tier.labelColor}22`, border:`1px solid ${tier.labelColor}55` }}>
+            {tier.gems.slice(0,4).map((g,i) => (
+              <span key={i} style={{ animation:`gemSparkle ${1+i*0.2}s ${i*0.15}s ease-in-out infinite` }}>{g}</span>
+            ))}
+            <span className="text-xs font-black" style={{ color: tier.labelColor }}>{tier.label}に進化！</span>
+          </div>
+        )}
+
+        {/* Title badge */}
+        <div className="relative z-10 flex items-center gap-2 rounded-2xl px-5 py-2"
           style={isPrincess
-            ? { background: `${t.color}30`, border: `1px solid ${t.color}50` }
-            : { background: 'rgba(255,255,255,0.25)' }}>
-          <p className="font-black text-lg text-center tracking-wide"
-            style={{ color: isPrincess ? t.color : 'white' }}>
+            ? { background:`${t.color}28`, border:`1px solid ${t.color}50` }
+            : { background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.18)' }}>
+          <span className="text-xl leading-none" style={{ filter:`drop-shadow(0 0 8px ${t.color})` }}>{t.icon}</span>
+          <p className="font-black text-base tracking-wide"
+            style={{ color: isPrincess ? t.color : 'white', textShadow: isPrincess ? `0 0 12px ${t.color}` : undefined }}>
             {t.title}
           </p>
         </div>
-        <p className="relative z-10 text-xs mt-1" style={{ color: isPrincess ? `${t.color}80` : 'rgba(255,255,255,0.4)' }}>
+
+        <p className="relative z-10 text-xs mt-0.5" style={{ color: isPrincess ? `${t.color}70` : 'rgba(255,255,255,0.3)' }}>
           タップして閉じる
         </p>
       </div>
@@ -1126,6 +1272,7 @@ export default function StudentPage() {
             nickname={nickname}
             level={curLevel}
             title={title.title}
+            titleIcon={title.icon}
             isPrincess={isPrincess}
             titleColor={title.color}
             badges={myBadges}
@@ -1260,48 +1407,196 @@ export default function StudentPage() {
           )}
         </div>
 
-        {/* EXP + streak bar */}
-        {mounted && (
-          <div className="rounded-2xl px-4 py-3 space-y-2"
-            style={isPrincess ? {
-              background: 'rgba(255,240,255,0.75)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(199,125,255,0.25)',
-              boxShadow: '0 4px 20px rgba(199,125,255,0.12)',
-            } : {
-              background: 'rgba(14,22,40,0.92)',
-              border: '1px solid rgba(255,180,0,0.15)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            }}>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-black tracking-widest uppercase"
-                style={{ color: isPrincess ? '#9B4DCA' : 'rgba(255,200,100,0.8)' }}>
-                {theme.xpLabel}
-              </span>
-              <span className="text-xs font-mono tabular-nums"
-                style={{ color: isPrincess ? '#C77DFF' : '#FFD700' }}>
-                {xpThis} <span style={{ color: isPrincess ? 'rgba(180,100,240,0.4)' : 'rgba(255,255,255,0.2)' }}>/ {xpNext}</span>
-              </span>
-            </div>
-            <div className="h-2.5 rounded-full overflow-hidden"
-              style={isPrincess
-                ? { background:'rgba(220,180,255,0.2)', border:'1px solid rgba(199,125,255,0.2)' }
-                : { background:'rgba(0,0,0,0.6)', border:'1px solid rgba(255,200,0,0.1)' }}>
-              <div className="h-full rounded-full transition-all duration-700"
+        {/* EXP + rank bar ── RICH REDESIGN */}
+        {mounted && (() => {
+          const rank = getRankInfo(curLevel);
+          const tier = getFrameTier(curLevel);
+          const nearMax = xpPct >= 78;
+          if (isPrincess) {
+            return (
+              <div className="rounded-2xl overflow-hidden relative"
                 style={{
-                  width: `${xpPct}%`,
-                  background: theme.xpBarGradient,
-                  boxShadow: isPrincess ? '0 0 10px rgba(199,125,255,0.6)' : '0 0 10px rgba(255,200,0,0.5)',
-                }}/>
+                  background: 'linear-gradient(135deg,rgba(255,240,255,0.82),rgba(240,220,255,0.78))',
+                  backdropFilter: 'blur(20px)',
+                  border: nearMax ? `2px solid transparent` : `1px solid rgba(199,125,255,0.3)`,
+                  boxShadow: nearMax
+                    ? `0 0 0 2px ${tier.glow}, 0 4px 32px ${tier.glow}`
+                    : `0 4px 24px rgba(199,125,255,0.14)`,
+                  animation: nearMax ? 'nearLevelUp 1.1s ease-in-out infinite' : undefined,
+                }}>
+                {/* Shimmer */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  <div className="absolute inset-y-0 w-1/4 bg-white/15 skew-x-12 animate-shimmer"/>
+                </div>
+                <div className="relative px-4 pt-3 pb-2">
+                  {/* Header row: crystal level + XP label */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {/* Crystal level badge */}
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full"
+                        style={{ background: tier.grad, boxShadow:`0 0 16px ${tier.glow}, 0 0 32px ${tier.glow}` }}>
+                        <span className="text-xs leading-none" style={{ animation:'gemSparkle 2s ease-in-out infinite' }}>💎</span>
+                        <span className="font-black text-sm" style={{ color: '#fff', textShadow:`0 0 12px ${tier.glow}` }}>
+                          Lv.{curLevel}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-black tracking-widest" style={{ color:'#9B4DCA' }}>
+                        {theme.xpLabel}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono tabular-nums font-black" style={{ color:'#C77DFF' }}>
+                      {xpThis}<span style={{ color:'rgba(160,80,220,0.4)' }}>/{xpNext}</span>
+                    </span>
+                  </div>
+
+                  {/* XP bar – crystal tube */}
+                  <div className="h-4 rounded-full overflow-hidden relative"
+                    style={{
+                      background:'rgba(180,120,240,0.15)',
+                      border:`1px solid rgba(199,125,255,0.35)`,
+                      boxShadow: nearMax ? `0 0 0 2px rgba(199,125,255,0.5), 0 0 20px rgba(199,125,255,0.6)` : undefined,
+                    }}>
+                    <div className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
+                      style={{
+                        width:`${xpPct}%`,
+                        background: nearMax
+                          ? 'linear-gradient(90deg,#C77DFF,#FFD700,#C77DFF)'
+                          : theme.xpBarGradient,
+                        boxShadow: nearMax
+                          ? '0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(199,125,255,0.6)'
+                          : '0 0 12px rgba(199,125,255,0.7)',
+                      }}>
+                      {/* Gem sparkles along bar at near-max */}
+                      {nearMax && [20,40,60,80].map((p,i) => (
+                        <span key={i} className="absolute top-1/2 -translate-y-1/2 text-[8px] select-none pointer-events-none"
+                          style={{ left:`${p}%`, animation:`twinkle ${1+i*0.2}s ${i*0.15}s ease-in-out infinite` }}>✦</span>
+                      ))}
+                      {/* Inner shine */}
+                      <div className="absolute inset-y-0 w-1/3 bg-white/30 rounded-full" style={{ left:'-10%' }}/>
+                    </div>
+                  </div>
+
+                  {/* Near level-up alert */}
+                  {nearMax && (
+                    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+                      <span className="text-[11px] font-black" style={{ color:'#FFD700', animation:'nearLevelUp 0.8s ease-in-out infinite', textShadow:'0 0 12px rgba(255,215,0,0.8)' }}>
+                        ✦ もうすぐレベルアップ！ ✦
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Stats row */}
+                  <div className="flex justify-between text-[11px] mt-1.5"
+                    style={{ color:'#B06CC0' }}>
+                    <span>{theme.enemyCountLabel} {ms.monstersDefeated}体</span>
+                    <span>{theme.encyclopediaLabel} {ms.defeatedIds.length}/{creatures.length}</span>
+                    <span>🔥{ms.streak}日連続</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Knight version
+          return (
+            <div className="rounded-2xl overflow-hidden relative"
+              style={{
+                background: 'linear-gradient(135deg,rgba(8,4,22,0.97),rgba(14,8,38,0.97))',
+                border: nearMax ? `1.5px solid ${rank.color}` : `1px solid rgba(255,180,0,0.18)`,
+                boxShadow: nearMax
+                  ? `0 0 0 1px ${rank.color}55, 0 0 32px ${rank.glow}, 0 4px 24px rgba(0,0,0,0.4)`
+                  : `0 4px 24px rgba(0,0,0,0.35)`,
+                animation: nearMax ? 'nearLevelUp 1.1s ease-in-out infinite' : undefined,
+              }}>
+              {/* Concrete texture */}
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+                style={{ backgroundImage:'repeating-linear-gradient(45deg,#FF6B00 0px,#FF6B00 2px,transparent 2px,transparent 14px)' }}/>
+              {/* Rank-colored top line */}
+              <div className="absolute top-0 left-0 right-0 h-0.5"
+                style={{ background:`linear-gradient(90deg,transparent,${rank.color},#FFD700,${rank.color},transparent)` }}/>
+
+              <div className="relative px-4 pt-3 pb-2">
+                {/* Header: rank plate + XP */}
+                <div className="flex items-center gap-2.5 mb-2">
+                  {/* Rank plate badge */}
+                  <div className="relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg overflow-hidden"
+                    style={{ background: rank.bg, boxShadow:`0 0 16px ${rank.glow}, 0 0 32px ${rank.glow.replace('0.9','0.5')}` }}>
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                      <div className="absolute inset-y-0 w-1/3 bg-white/20 skew-x-12" style={{ animation:'shimmer 2.5s ease infinite' }}/>
+                    </div>
+                    <span className="relative font-black text-lg leading-none" style={{ color: rank.textColor, letterSpacing:'-0.02em' }}>
+                      {rank.rank}
+                    </span>
+                    <span className="relative text-[10px] font-black" style={{ color:`${rank.textColor}cc` }}>
+                      ランク
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-black tracking-widest uppercase"
+                        style={{ color:'rgba(255,200,100,0.75)' }}>
+                        {theme.xpLabel}
+                      </span>
+                      <span className="text-xs font-mono tabular-nums font-black" style={{ color:'#FFD700' }}>
+                        {xpThis}<span style={{ color:'rgba(255,255,255,0.2)' }}>/{xpNext}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* XP bar – neon graffiti gauge */}
+                <div className="h-5 rounded-md overflow-hidden relative"
+                  style={{
+                    background:'rgba(0,0,0,0.7)',
+                    border:`1px solid ${nearMax ? rank.color : 'rgba(255,200,0,0.12)'}`,
+                    boxShadow: nearMax ? `0 0 20px ${rank.glow}, 0 0 40px ${rank.glow.replace('0.9','0.5')}` : undefined,
+                  }}>
+                  <div className="h-full rounded-md transition-all duration-700 relative overflow-hidden"
+                    style={{
+                      width:`${xpPct}%`,
+                      background: nearMax
+                        ? `linear-gradient(90deg,${rank.color},#FFD700,${rank.color})`
+                        : theme.xpBarGradient,
+                      boxShadow: nearMax
+                        ? `0 0 20px ${rank.glow}, 0 0 40px ${rank.glow.replace('0.9','0.6')}`
+                        : `0 0 12px rgba(255,200,0,0.55)`,
+                    }}>
+                    {/* Shine */}
+                    <div className="absolute inset-0 bg-white/15 rounded-md" style={{ background:'linear-gradient(180deg,rgba(255,255,255,0.25) 0%,transparent 60%)' }}/>
+                    {/* Sparks at near-max */}
+                    {nearMax && ['⚡','💥','⚡'].map((s,i) => (
+                      <span key={i} className="absolute top-1/2 -translate-y-1/2 text-[10px] select-none pointer-events-none"
+                        style={{ left:`${25+i*28}%`, animation:`twinkle ${0.8+i*0.15}s ${i*0.1}s ease-in-out infinite` }}>{s}</span>
+                    ))}
+                  </div>
+                  {/* % text overlay */}
+                  <span className="absolute inset-0 flex items-center justify-end pr-1.5 text-[9px] font-black"
+                    style={{ color: xpPct > 30 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.4)' }}>
+                    {Math.round(xpPct)}%
+                  </span>
+                </div>
+
+                {/* Near level-up graffiti alert */}
+                {nearMax && (
+                  <div className="mt-1.5 flex items-center justify-center">
+                    <span className="font-black text-[12px] tracking-widest uppercase"
+                      style={{ color: rank.color, textShadow:`0 0 16px ${rank.glow}`, animation:'nearLevelUp 0.75s ease-in-out infinite', letterSpacing:'0.12em' }}>
+                      ⚡ あと少しでLEVEL UP! ⚡
+                    </span>
+                  </div>
+                )}
+
+                {/* Stats row */}
+                <div className="flex justify-between text-[11px] mt-1.5"
+                  style={{ color:'rgba(255,255,255,0.33)' }}>
+                  <span>{theme.enemyCountLabel} {ms.monstersDefeated}体</span>
+                  <span>{theme.encyclopediaLabel} {ms.defeatedIds.length}/{creatures.length}</span>
+                  <span>🔥{ms.streak}日連続</span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between text-[11px]"
-              style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.35)' }}>
-              <span>{theme.enemyCountLabel} {ms.monstersDefeated} 体</span>
-              <span>{theme.encyclopediaLabel} {ms.defeatedIds.length} / {creatures.length}</span>
-              <span>連続 {ms.streak}日 🔥</span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Attack panel */}
         {mounted && alreadyAttackedToday ? (
