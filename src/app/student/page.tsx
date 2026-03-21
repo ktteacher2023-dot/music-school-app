@@ -57,6 +57,156 @@ function fmtSize(b: number) {
   return `${(b/1024/1024).toFixed(1)}MB`;
 }
 
+// ─── Name plate ───────────────────────────────────────────────────────────────
+function NamePlate({ nickname, level, title, isPrincess, titleColor }:
+  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string }) {
+  if (!nickname) return null;
+
+  if (isPrincess) {
+    return (
+      <div className="relative mx-0 overflow-visible animate-pop-in"
+        style={{ animationDuration: '0.5s' }}>
+        {/* Outer glow */}
+        <div className="absolute inset-0 rounded-3xl pointer-events-none"
+          style={{ boxShadow:'0 0 32px rgba(199,125,255,0.3), 0 0 64px rgba(135,206,235,0.15)' }}/>
+        <div className="rounded-3xl px-5 py-4 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(220,180,255,0.14) 100%)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,215,0,0.35)',
+          }}>
+          {/* Corner sparkles */}
+          {[
+            { top:6,  left:10,  sz:14, d:'0s',    c:'#FFD700' },
+            { top:6,  right:10, sz:11, d:'0.4s',  c:'#C77DFF' },
+            { bottom:6, left:12, sz:10, d:'0.8s', c:'#87CEEB' },
+            { bottom:6, right:8, sz:13, d:'0.6s', c:'#FFB7C5' },
+          ].map((s,i) => (
+            <span key={i} className="absolute select-none"
+              style={{ ...s, fontSize:s.sz, color:s.c, animation:`twinkle 2.2s ${s.d} ease-in-out infinite` }}>
+              ✦
+            </span>
+          ))}
+          {/* Shimmer sweep */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+            <div className="absolute inset-y-0 w-1/4 bg-white/10 skew-x-12 animate-shimmer"/>
+          </div>
+
+          <div className="relative flex items-center gap-3">
+            {/* Wand icon */}
+            <div className="shrink-0 flex flex-col items-center gap-1">
+              <span className="text-3xl leading-none" style={{ filter:'drop-shadow(0 0 10px rgba(199,125,255,0.8))' }}>🪄</span>
+              <span className="text-lg leading-none">🎀</span>
+            </div>
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black tracking-[0.2em] uppercase"
+                style={{ color:'rgba(199,125,255,0.7)' }}>
+                ✦ Welcome Back ✦
+              </p>
+              <p className="font-black leading-tight"
+                style={{
+                  fontSize: nickname.length > 6 ? 22 : 26,
+                  background: 'linear-gradient(90deg,#FFD700,#C77DFF,#87CEEB)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: 'none',
+                }}>
+                こんにちは、{nickname}ちゃん！
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs font-bold" style={{ color: titleColor }}>
+                  {title}
+                </span>
+                <span style={{ color:'rgba(199,125,255,0.3)' }}>·</span>
+                <span className="text-xs font-bold" style={{ color:'rgba(199,125,255,0.6)' }}>
+                  Lv. {level}
+                </span>
+              </div>
+            </div>
+            {/* Right deco */}
+            <div className="shrink-0 flex flex-col items-center gap-1">
+              <span className="text-2xl leading-none animate-sparkle">⭐</span>
+              <span className="text-xl leading-none" style={{ animation:'twinkle 1.8s 0.5s ease-in-out infinite' }}>✨</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Knight – graffiti ink plate
+  return (
+    <div className="relative mx-0 overflow-visible animate-pop-in"
+      style={{ animationDuration: '0.5s' }}>
+      {/* Ink splash blobs behind plate */}
+      <svg className="absolute pointer-events-none select-none"
+        width="100%" height="100%" style={{ top:-8, left:-6, overflow:'visible' }} aria-hidden>
+        <ellipse cx="12%" cy="50%" rx="18" ry="12" fill="#FF6B00" opacity="0.35" transform="rotate(-15,50,50)"/>
+        <ellipse cx="88%" cy="40%" rx="14" ry="9"  fill="#7B00FF" opacity="0.3"  transform="rotate(10,50,50)"/>
+        <ellipse cx="92%" cy="70%" rx="10" ry="7"  fill="#FF9F0A" opacity="0.28"/>
+        <circle cx="5%"  cy="25%" r="6"  fill="#FF3B30" opacity="0.25"/>
+        <circle cx="95%" cy="20%" r="8"  fill="#7B00FF" opacity="0.22"/>
+        <circle cx="50%" cy="92%" r="5"  fill="#FF6B00" opacity="0.2"/>
+      </svg>
+
+      <div className="rounded-2xl px-5 py-4 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(10,6,30,0.96) 0%, rgba(20,10,50,0.96) 100%)',
+          border: '1px solid rgba(255,107,0,0.35)',
+          boxShadow: '0 4px 32px rgba(255,107,0,0.2), inset 0 1px 0 rgba(255,200,0,0.08)',
+        }}>
+        {/* Diagonal stripes (stencil texture) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl opacity-[0.04]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(45deg, #FF6B00 0px, #FF6B00 2px, transparent 2px, transparent 12px)',
+          }}/>
+        {/* Orange glow line top */}
+        <div className="absolute top-0 left-0 right-0 h-px"
+          style={{ background:'linear-gradient(90deg, transparent, #FF6B00, #FFD700, #FF6B00, transparent)' }}/>
+
+        <div className="relative flex items-center gap-3">
+          {/* Left ink icon */}
+          <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background:'linear-gradient(135deg,#FF6B00,#FF3B30)', boxShadow:'0 2px 16px rgba(255,107,0,0.5)' }}>
+            <span className="text-2xl leading-none">🎮</span>
+          </div>
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black tracking-[0.22em] uppercase"
+              style={{ color:'rgba(255,107,0,0.7)' }}>
+              PLAYER
+            </p>
+            <p className="font-black leading-none truncate"
+              style={{
+                fontSize: nickname.length > 6 ? 22 : 26,
+                color: 'white',
+                textShadow: '0 0 20px rgba(255,107,0,0.7), 0 2px 4px rgba(0,0,0,0.8)',
+                letterSpacing: '0.02em',
+              }}>
+              {nickname}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background:'rgba(255,107,0,0.2)', border:'1px solid rgba(255,107,0,0.4)', color:'#FF9F0A' }}>
+                Lv.{level}
+              </span>
+              <span className="text-[11px] font-bold" style={{ color: titleColor }}>
+                {title}
+              </span>
+            </div>
+          </div>
+          {/* Right paint splat */}
+          <div className="shrink-0 flex flex-col items-center gap-0.5">
+            <span className="text-2xl leading-none" style={{ filter:'drop-shadow(0 0 8px rgba(255,107,0,0.9))' }}>🎨</span>
+            <span className="text-xs font-black" style={{ color:'#FF9F0A' }}>READY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Background decoration layer ─────────────────────────────────────────────
 function BackgroundLayer({ isPrincess }: { isPrincess: boolean }) {
   if (!isPrincess) {
@@ -542,7 +692,8 @@ export default function StudentPage() {
   const [records,  setRecords]  = useState<PracticeRecord[]>([]);
   const [mounted,  setMounted]  = useState(false);
   const [ms,       setMs]       = useState<MonsterState>(INIT);
-  const [charType, setCharType] = useState<CharacterType>('knight');
+  const [charType,  setCharType]  = useState<CharacterType>('knight');
+  const [nickname,  setNickname]  = useState('');
 
   // monster anim
   const [shaking, setShaking]   = useState(false);
@@ -572,6 +723,7 @@ export default function StudentPage() {
     const p = getProfile();
     if (!p) { router.replace('/setup'); return; }
     setCharType(p.type ?? 'knight');
+    setNickname(p.nickname ?? '');
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
   }, [load, router]);
@@ -769,6 +921,17 @@ export default function StudentPage() {
       </header>
 
       <div className="relative z-10 px-4 pt-4 pb-6 space-y-4">
+
+        {/* ── Name plate ── */}
+        {mounted && nickname && (
+          <NamePlate
+            nickname={nickname}
+            level={curLevel}
+            title={title.title}
+            isPrincess={isPrincess}
+            titleColor={title.color}
+          />
+        )}
 
         {/* ── Arena card ── */}
         <div className="rounded-3xl overflow-hidden relative"
