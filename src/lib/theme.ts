@@ -47,7 +47,7 @@ export interface ThemeConfig {
 
 const KNIGHT_THEME: ThemeConfig = {
   type: 'knight',
-  bgPage: '#F2F2F7',
+  bgPage: '#070b1a',
   primary: '#007AFF',
   coinEmoji: '🪙',
   coinColor: '#D97706',

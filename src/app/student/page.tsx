@@ -17,6 +17,7 @@ import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/l
 import AvatarUploader from '@/components/AvatarUploader';
 import { uploadStudentAvatar, fetchTeacherAvatarFromSupabase } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
+import MusicQuizGame from '@/components/MusicQuizGame';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -1296,6 +1297,9 @@ export default function StudentPage() {
   const [noteIsNew,        setNoteIsNew]        = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
 
+  // music quiz game
+  const [showMusicGame, setShowMusicGame] = useState(false);
+
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
 
@@ -1465,6 +1469,19 @@ export default function StudentPage() {
     localStorage.setItem(LAST_ATTACK_KEY, today); setLastAttackDate(today);
   };
 
+  // Music quiz game: award EXP and close
+  const handleGameEnd = (expGained: number) => {
+    setShowMusicGame(false);
+    if (expGained <= 0) return;
+    const newTotalXp = ms.totalXp + expGained;
+    const newLevel   = calcLevel(newTotalXp);
+    const next: MonsterState = { ...ms, totalXp: newTotalXp, level: newLevel };
+    setMs(next);
+    saveMS(next);
+    syncStatsToSupabase(newTotalXp, newLevel, ms.monstersDefeated, ms.streak);
+    if (newLevel > ms.level) setTimeout(() => setLevelUpVal(newLevel), 300);
+  };
+
   // Fire-and-forget: sync game stats to Supabase profiles table
   const syncStatsToSupabase = (xp: number, lv: number, defeated: number, streak: number) => {
     if (!supabase) return;
@@ -1511,6 +1528,11 @@ export default function StudentPage() {
 
       {/* Level-up modal */}
       {levelUpVal && <LevelUpModal level={levelUpVal} onClose={() => setLevelUpVal(null)} charType={charType} />}
+
+      {/* Music quiz game */}
+      {showMusicGame && (
+        <MusicQuizGame isPrincess={isPrincess} onGameEnd={handleGameEnd}/>
+      )}
 
       {/* Header */}
       <header className="sticky top-0 z-20"
@@ -1950,19 +1972,36 @@ export default function StudentPage() {
               border: '1px solid rgba(199,125,255,0.25)',
               boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
             } : {
-              background: 'rgba(14,22,40,0.92)',
-              border: '1px solid rgba(255,180,0,0.15)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+              background: 'rgba(3,6,18,0.97)',
+              border: '1px solid rgba(255,180,0,0.3)',
+              boxShadow: '0 4px 32px rgba(0,0,0,0.6)',
             }}>
             <span className="text-5xl" style={{ filter:'drop-shadow(0 0 16px rgba(150,100,255,0.5))' }}>
               {isPrincess ? '🌸' : '🌙'}
             </span>
-            <p className="font-black text-base" style={{ color: isPrincess ? '#6a0080' : 'white' }}>
+            <p className="font-black text-base" style={{ color: isPrincess ? '#6a0080' : '#ffffff' }}>
               今日の練習は完了しました！
             </p>
             <p className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
               {theme.completedNextMsg}
             </p>
+            {/* Music quiz game button */}
+            <button
+              onClick={() => setShowMusicGame(true)}
+              className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+              style={{
+                background: isPrincess
+                  ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
+                  : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                boxShadow: isPrincess
+                  ? '0 4px 20px rgba(199,125,255,0.5)'
+                  : '0 4px 20px rgba(255,107,0,0.6)',
+                border: 'none', cursor: 'pointer',
+                animation: 'floatBounce 3s ease-in-out infinite',
+              }}>
+              {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
+            </button>
+
             {ms.streak >= 3 && (
               <div className="mt-1 px-5 py-2 rounded-2xl"
                 style={{
