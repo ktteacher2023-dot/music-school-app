@@ -68,21 +68,14 @@ export default function InstallPrompt() {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         {/* アイコン */}
-        <div
-          style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'rgba(255,255,255,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '28px',
-            flexShrink: 0,
-          }}
-        >
-          🎹
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/api/icon-512"
+          alt="アプリアイコン"
+          width={52}
+          height={52}
+          style={{ borderRadius: '14px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}
+        />
 
         {/* テキスト */}
         <div style={{ flex: 1, minWidth: 0 }}>
