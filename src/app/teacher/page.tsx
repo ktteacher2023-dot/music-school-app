@@ -7,6 +7,8 @@ import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
 import { awardBadge, hasBadge } from '@/lib/badges';
 import { supabase } from '@/lib/supabase';
+import AvatarUploader from '@/components/AvatarUploader';
+import { uploadTeacherAvatar, getTeacherAvatarUrl } from '@/lib/avatar';
 import type { MonsterState } from '@/app/student/page';
 import StarRating from '@/components/StarRating';
 
@@ -77,6 +79,7 @@ export default function TeacherPage() {
   const [expressionGranted, setExpressionGranted] = useState(false);
   const [expressionAlready, setExpressionAlready] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -84,6 +87,7 @@ export default function TeacherPage() {
     setStats(loadMS());
     setProfile(getProfile());
     setExpressionAlready(hasBadge('expression'));
+    setTeacherAvatarUrl(getTeacherAvatarUrl());
   }, []);
 
   const reload = () => setSubs(getSubmissions());
@@ -105,6 +109,11 @@ export default function TeacherPage() {
   const cur   = MONSTERS[(stats?.monsterIndex ?? 0) % MONSTERS.length];
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const handleTeacherAvatarUpload = async (file: File) => {
+    const url = await uploadTeacherAvatar(file);
+    if (url) setTeacherAvatarUrl(url);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem(ROLE_KEY);
     router.push('/');
@@ -173,7 +182,17 @@ export default function TeacherPage() {
       <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-10 border-b border-[#C6C6C8]/60"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            {mounted && (
+              <AvatarUploader
+                currentUrl={teacherAvatarUrl}
+                onUpload={handleTeacherAvatarUpload}
+                isPrincess={false}
+                size={36}
+                shape="circle"
+                defaultContent={<span className="text-base leading-none">👨‍🏫</span>}
+              />
+            )}
             <h1 className="text-xl font-bold text-[#1C1C1E]">先生ダッシュボード</h1>
             {mounted && uncommented > 0 && (
               <span className="bg-[#FF3B30] text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
@@ -238,9 +257,16 @@ export default function TeacherPage() {
 
               {/* Student info row */}
               <div className="px-4 py-3 flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-2xl shadow-sm"
+                <div className="shrink-0 w-14 h-14 rounded-2xl overflow-hidden shadow-sm relative"
                   style={{ background: `linear-gradient(135deg,${cur.from},${cur.to})` }}>
-                  {cur.emoji}
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="avatar"
+                      className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-2xl">
+                      {cur.emoji}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -513,8 +539,12 @@ function SubmissionItem({ sub, onUpdate, profile }: {
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center shrink-0">
-            <span className="text-white text-[10px] font-bold">{profile?.nickname?.[0] ?? '生'}</span>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] shrink-0 overflow-hidden flex items-center justify-center">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover"/>
+            ) : (
+              <span className="text-white text-[10px] font-bold">{profile?.nickname?.[0] ?? '生'}</span>
+            )}
           </div>
           <div>
             <p className="text-xs font-semibold text-[#1C1C1E]">{profile?.nickname ?? '生徒'}からの提出</p>

@@ -11,6 +11,7 @@ export interface Profile {
   type: CharacterType;
   createdAt: number;
   badges?: BadgeRecord[];
+  avatar_url?: string;
 }
 
 const KEY = 'student_profile_v1';

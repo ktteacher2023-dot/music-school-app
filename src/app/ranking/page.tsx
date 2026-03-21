@@ -14,6 +14,7 @@ interface Player {
   streak: number;
   isMe: boolean;
   type?: CharacterType;
+  avatarUrl?: string;
 }
 
 // ─── Demo data (other students in the school) ─────────────────────────────────
@@ -63,8 +64,8 @@ function RankRow({ rank, player, isPrincess, badges }: {
           {rank}
         </span>
       </div>
-      {/* Type dot */}
-      <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-sm"
+      {/* Type dot / avatar */}
+      <div className="w-7 h-7 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-sm"
         style={{
           background: player.type === 'princess'
             ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
@@ -73,7 +74,11 @@ function RankRow({ rank, player, isPrincess, badges }: {
             ? '0 0 8px rgba(199,125,255,0.5)'
             : '0 0 8px rgba(255,107,0,0.5)',
         }}>
-        {player.type === 'princess' ? '🌸' : '⚔️'}
+        {isMe && player.avatarUrl ? (
+          <img src={player.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+        ) : (
+          player.type === 'princess' ? '🌸' : '⚔️'
+        )}
       </div>
       {/* Name + title */}
       <div className="flex-1 min-w-0">
@@ -143,10 +148,18 @@ function KnightPodium({ top3 }: { top3: Player[] }) {
             <div key={p.id} className="flex flex-col items-center" style={{ width: widths[i] }}>
               {/* Info above podium */}
               <div className={`text-center mb-2 px-1 ${isMe ? 'animate-float-bounce' : ''}`}>
-                {/* Crown / badge */}
-                <div className="text-2xl leading-none mb-1"
-                  style={{ filter: rank === 1 ? `drop-shadow(0 0 12px ${rc})` : undefined }}>
-                  {KNIGHT_BADGE[rank]}
+                {/* Crown / badge + optional avatar */}
+                <div className="flex flex-col items-center gap-1 mb-1">
+                  <div className="text-2xl leading-none"
+                    style={{ filter: rank === 1 ? `drop-shadow(0 0 12px ${rc})` : undefined }}>
+                    {KNIGHT_BADGE[rank]}
+                  </div>
+                  {isMe && p.avatarUrl && (
+                    <div className="w-10 h-10 rounded-full overflow-hidden mx-auto"
+                      style={{ border: `2px solid ${rc}`, boxShadow: `0 0 10px ${rc}66` }}>
+                      <img src={p.avatarUrl} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    </div>
+                  )}
                 </div>
                 <p className="font-black text-sm leading-tight truncate w-full"
                   style={{
@@ -232,14 +245,21 @@ function PrincessTop3({ top3 }: { top3: Player[] }) {
                   </span>
                 ))}
                 <div className="relative flex items-center gap-4">
-                  {/* Medal */}
-                  <div className="w-14 h-14 rounded-full shrink-0 flex flex-col items-center justify-center"
+                  {/* Medal / avatar */}
+                  <div className="w-14 h-14 rounded-full shrink-0 overflow-hidden flex flex-col items-center justify-center"
                     style={{
                       background: 'linear-gradient(135deg,#FFD700,#B8860B)',
                       boxShadow: '0 0 24px rgba(255,215,0,0.6), 0 0 48px rgba(255,215,0,0.2)',
+                      border: '2.5px solid #FFD700',
                     }}>
-                    <span className="text-2xl leading-none">👑</span>
-                    <span className="text-[10px] font-black text-yellow-900">1st</span>
+                    {p.isMe && p.avatarUrl ? (
+                      <img src={p.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    ) : (
+                      <>
+                        <span className="text-2xl leading-none">👑</span>
+                        <span className="text-[10px] font-black text-yellow-900">1st</span>
+                      </>
+                    )}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
@@ -338,6 +358,7 @@ export default function RankingPage() {
       streak: myStreak,
       isMe: true,
       type,
+      avatarUrl: p?.avatar_url ?? undefined,
     };
 
     const all = [...DEMO.map(d => ({ ...d, isMe: false })), me]

@@ -14,6 +14,8 @@ import { getProfile, type CharacterType } from '@/lib/profile';
 import { getTheme } from '@/lib/theme';
 import { COMPANIONS } from '@/lib/companionData';
 import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/lib/badges';
+import AvatarUploader from '@/components/AvatarUploader';
+import { uploadStudentAvatar } from '@/lib/avatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -165,8 +167,8 @@ function BadgeChip({ badgeId, charType }: { badgeId: BadgeId; charType: Characte
   );
 }
 
-function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, charType }:
-  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string; badges: BadgeId[]; charType: CharacterType }) {
+function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, charType, avatarUrl, onAvatarUpload }:
+  { nickname:string; level:number; title:string; isPrincess:boolean; titleColor:string; badges: BadgeId[]; charType: CharacterType; avatarUrl: string | null; onAvatarUpload: (f: File) => Promise<void>; }) {
   if (!nickname) return null;
 
   if (isPrincess) {
@@ -200,10 +202,27 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
           </div>
 
           <div className="relative flex items-center gap-3">
-            {/* Wand icon */}
-            <div className="shrink-0 flex flex-col items-center gap-1">
-              <span className="text-3xl leading-none" style={{ filter:'drop-shadow(0 0 10px rgba(199,125,255,0.8))' }}>🪄</span>
-              <span className="text-lg leading-none">🎀</span>
+            {/* Princess avatar – magic mirror frame */}
+            <div className="relative shrink-0">
+              <AvatarUploader
+                currentUrl={avatarUrl}
+                onUpload={onAvatarUpload}
+                isPrincess={true}
+                size={52}
+                shape="circle"
+                defaultContent={<span className="text-2xl leading-none">🌸</span>}
+              />
+              {/* Corner sparkles outside frame */}
+              {[
+                { top: -6, left: -4, c: '#FFD700', d: '0s',   f: 10 },
+                { top: -6, right: -4, c: '#C77DFF', d: '0.5s', f: 8 },
+                { bottom: -5, left: -4, c: '#87CEEB', d: '1s', f: 7 },
+              ].map((s, i) => (
+                <span key={i} className="absolute select-none pointer-events-none"
+                  style={{ ...s, fontSize: s.f, color: s.c, animation: `twinkle 2.2s ${s.d} ease-in-out infinite` }}>
+                  ✦
+                </span>
+              ))}
             </div>
             {/* Text */}
             <div className="flex-1 min-w-0">
@@ -278,10 +297,16 @@ function NamePlate({ nickname, level, title, isPrincess, titleColor, badges, cha
           style={{ background:'linear-gradient(90deg, transparent, #FF6B00, #FFD700, #FF6B00, transparent)' }}/>
 
         <div className="relative flex items-center gap-3">
-          {/* Left ink icon */}
-          <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background:'linear-gradient(135deg,#FF6B00,#FF3B30)', boxShadow:'0 2px 16px rgba(255,107,0,0.5)' }}>
-            <span className="text-2xl leading-none">🎮</span>
+          {/* Knight avatar – ink-splashed frame */}
+          <div className="relative shrink-0">
+            <AvatarUploader
+              currentUrl={avatarUrl}
+              onUpload={onAvatarUpload}
+              isPrincess={false}
+              size={48}
+              shape="rounded"
+              defaultContent={<span className="text-2xl leading-none">🎮</span>}
+            />
           </div>
           {/* Text */}
           <div className="flex-1 min-w-0">
@@ -825,6 +850,9 @@ export default function StudentPage() {
   const [newBadgeId, setNewBadgeId] = useState<BadgeId | null>(null);
   const [myBadges,   setMyBadges]   = useState<BadgeId[]>([]);
 
+  // avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
 
@@ -845,6 +873,7 @@ export default function StudentPage() {
     if (!p) { router.replace('/setup'); return; }
     setCharType(p.type ?? 'knight');
     setNickname(p.nickname ?? '');
+    setAvatarUrl(p.avatar_url ?? null);
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
     // Load current badges; if expression badge was just awarded by teacher, celebrate
@@ -967,6 +996,11 @@ export default function StudentPage() {
     localStorage.setItem(LAST_ATTACK_KEY, today); setLastAttackDate(today);
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    const url = await uploadStudentAvatar(file);
+    if (url) setAvatarUrl(url);
+  };
+
   const handleLogout = () => { localStorage.removeItem(ROLE_KEY); router.push('/'); };
 
   const handleAttackWithInk = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1082,6 +1116,8 @@ export default function StudentPage() {
             titleColor={title.color}
             badges={myBadges}
             charType={charType}
+            avatarUrl={avatarUrl}
+            onAvatarUpload={handleAvatarUpload}
           />
         )}
 
