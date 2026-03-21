@@ -865,84 +865,169 @@ function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
     );
   }
 
-  // Knight – street bulletin board
+  // Knight – graffiti bulletin board (street / neon night)
   return (
-    <div className="relative rounded-2xl overflow-hidden animate-pop-in" style={{ animationDuration:'0.5s' }}>
-      {/* Ink blobs behind */}
-      <svg className="absolute pointer-events-none select-none" width="100%" height="100%"
-        style={{ top:-6, left:-4, overflow:'visible' }} aria-hidden>
-        <ellipse cx="6%"  cy="30%" rx="14" ry="9"  fill="#FF6B00" opacity="0.3" transform="rotate(-18,50,50)"/>
-        <ellipse cx="92%" cy="60%" rx="11" ry="7"  fill="#7B00FF" opacity="0.25" transform="rotate(12,50,50)"/>
-        <circle  cx="96%" cy="18%" r="6"            fill="#FF9F0A" opacity="0.22"/>
+    <div className="relative animate-pop-in" style={{ animationDuration:'0.5s' }}>
+      {/* ── Large ink explosion blobs BEHIND the card ── */}
+      <svg className="absolute pointer-events-none select-none"
+        style={{ top:-14, left:-10, overflow:'visible', zIndex:0 }} width="100%" height="100%" aria-hidden>
+        <ellipse cx="3%"   cy="22%"  rx="26" ry="16" fill="#FF6B00" opacity="0.48" transform="rotate(-22,50,50)"/>
+        <ellipse cx="97%"  cy="18%"  rx="22" ry="13" fill="#7B00FF" opacity="0.42" transform="rotate(14,50,50)"/>
+        <ellipse cx="4%"   cy="78%"  rx="20" ry="12" fill="#FF9F0A" opacity="0.40" transform="rotate(8,50,50)"/>
+        <ellipse cx="96%"  cy="75%"  rx="18" ry="11" fill="#FF3B30" opacity="0.36" transform="rotate(-10,50,50)"/>
+        {/* splatter dots */}
+        <circle cx="8%"   cy="5%"   r="5"   fill="#FFD700" opacity="0.55"/>
+        <circle cx="92%"  cy="6%"   r="4"   fill="#FF6B00" opacity="0.50"/>
+        <circle cx="2%"   cy="50%"  r="3.5" fill="#7B00FF" opacity="0.45"/>
+        <circle cx="98%"  cy="48%"  r="4"   fill="#FF9F0A" opacity="0.45"/>
+        <circle cx="50%"  cy="102%" r="5"   fill="#FF3B30" opacity="0.40"/>
+        <circle cx="25%"  cy="-2%"  r="3"   fill="#FF6B00" opacity="0.48"/>
+        <circle cx="75%"  cy="-3%"  r="2.5" fill="#7B00FF" opacity="0.42"/>
       </svg>
 
       <div className="relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg,rgba(8,4,22,0.97),rgba(15,8,40,0.97))',
-          border: '1.5px solid rgba(255,107,0,0.38)',
-          boxShadow: '0 4px 32px rgba(255,107,0,0.18), inset 0 1px 0 rgba(255,200,0,0.06)',
+          background: 'linear-gradient(160deg,rgba(6,3,18,0.98) 0%,rgba(12,6,32,0.98) 100%)',
+          border: '2px solid rgba(255,107,0,0.55)',
+          boxShadow: '0 6px 40px rgba(255,107,0,0.25), 0 0 0 1px rgba(123,0,255,0.3), inset 0 1px 0 rgba(255,200,0,0.08)',
           borderRadius: '1rem',
+          zIndex: 1,
         }}>
-        {/* Concrete diagonal texture */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.035]"
-          style={{ backgroundImage:'repeating-linear-gradient(45deg,#FF6B00 0px,#FF6B00 2px,transparent 2px,transparent 14px)' }}/>
-        {/* Neon top line */}
-        <div className="absolute top-0 left-0 right-0 h-0.5"
-          style={{ background:'linear-gradient(90deg,transparent,#FF6B00,#FFD700,#FF6B00,transparent)' }}/>
 
-        {/* Header – neon sign */}
+        {/* Concrete wall texture */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{
+            opacity: 0.045,
+            backgroundImage: 'repeating-linear-gradient(45deg,#FF6B00 0px,#FF6B00 2px,transparent 2px,transparent 16px)',
+          }}/>
+
+        {/* Top neon glow bar */}
+        <div className="absolute top-0 left-0 right-0 h-[3px]"
+          style={{ background:'linear-gradient(90deg,#7B00FF,#FF6B00,#FFD700,#FF3B30,#FF6B00,#7B00FF)', opacity:0.85 }}/>
+        {/* Bottom subtle line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px"
+          style={{ background:'linear-gradient(90deg,transparent,rgba(255,107,0,0.35),transparent)' }}/>
+
+        {/* ── Header: neon sign board ── */}
         <div className="relative flex items-center justify-between px-4 py-2.5"
-          style={{ borderBottom:'1px solid rgba(255,107,0,0.18)' }}>
+          style={{ borderBottom:'1px solid rgba(255,107,0,0.22)', background:'rgba(255,107,0,0.06)' }}>
           <div className="flex items-center gap-2.5">
-            {/* Neon dot */}
-            <div className="w-2 h-2 rounded-full"
-              style={{ background:'#FF6B00', boxShadow:'0 0 8px #FF6B00, 0 0 20px rgba(255,107,0,0.7)', animation:'nearLevelUp 1.5s ease-in-out infinite' }}/>
-            <span className="text-[11px] font-black tracking-[0.2em] uppercase"
-              style={{ color:'#FF9F0A', textShadow:'0 0 12px rgba(255,107,0,0.8)' }}>
-              先生からのメッセージ
+            {/* Neon traffic-light dots */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full"
+                style={{ background:'#FF3B30', boxShadow:'0 0 6px #FF3B30, 0 0 14px rgba(255,59,48,0.8)', animation:'nearLevelUp 2.1s ease-in-out infinite' }}/>
+              <div className="w-2 h-2 rounded-full"
+                style={{ background:'#FFD700', boxShadow:'0 0 6px #FFD700, 0 0 14px rgba(255,215,0,0.7)', animation:'nearLevelUp 2.1s 0.4s ease-in-out infinite' }}/>
+              <div className="w-2 h-2 rounded-full"
+                style={{ background:'#34C759', boxShadow:'0 0 6px #34C759, 0 0 14px rgba(52,199,89,0.7)', animation:'nearLevelUp 2.1s 0.8s ease-in-out infinite' }}/>
+            </div>
+            {/* Graffiti label */}
+            <span className="font-black tracking-[0.16em] uppercase"
+              style={{
+                fontSize: 12,
+                background: 'linear-gradient(90deg,#FF9F0A,#FFD700,#FF6B00)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                textShadow: 'none',
+                letterSpacing: '0.18em',
+              }}>
+              SENSEI BOARD
+            </span>
+            <span className="text-[10px] font-black tracking-[0.1em]"
+              style={{ color:'rgba(255,107,0,0.55)' }}>
+              ▸ 先生より
             </span>
           </div>
           {isNew && (
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-md"
-              style={{ background:'#FF3B30', color:'white', boxShadow:'0 0 8px rgba(255,59,48,0.6)', animation:'nearLevelUp 0.9s ease-in-out infinite' }}>
-              NEW!
-            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full"
+                style={{ background:'#FF3B30', boxShadow:'0 0 6px #FF3B30', animation:'nearLevelUp 0.6s ease-in-out infinite' }}/>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded"
+                style={{ background:'linear-gradient(90deg,#FF3B30,#FF6B00)', color:'white', boxShadow:'0 0 12px rgba(255,59,48,0.7)', letterSpacing:'0.08em' }}>
+                NEW!
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Message body */}
-        <div className="flex items-start gap-3 px-4 py-3">
-          {/* Teacher avatar */}
-          <div className="shrink-0">
+        {/* ── Message body ── */}
+        <div className="flex items-start gap-3.5 px-4 py-3.5">
+          {/* Teacher avatar – ink-splattered frame */}
+          <div className="shrink-0 relative">
             {teacherAvatar ? (
               <div className="relative">
+                {/* Ink splat behind avatar */}
+                <svg style={{ position:'absolute', overflow:'visible', pointerEvents:'none', top:-4, left:-4 }} width="52" height="52" aria-hidden>
+                  <ellipse cx="-2" cy="-2" rx="12" ry="7" fill="#FF6B00" opacity="0.6" transform="rotate(-15,-2,-2)"/>
+                  <ellipse cx="54" cy="-1" rx="10" ry="6" fill="#7B00FF" opacity="0.55" transform="rotate(12,54,-1)"/>
+                  <ellipse cx="-1" cy="54" rx="9" ry="6" fill="#FF9F0A" opacity="0.50" transform="rotate(8,-1,54)"/>
+                  <circle cx="54" cy="54" r="5" fill="#FF3B30" opacity="0.48"/>
+                </svg>
                 <img src={teacherAvatar} alt="teacher"
-                  className="w-11 h-11 rounded-xl object-cover"
-                  style={{ border:'2px solid rgba(255,107,0,0.55)', boxShadow:'0 0 16px rgba(255,107,0,0.4)' }}/>
-                {/* Ink border glow */}
-                <div className="absolute inset-0 rounded-xl pointer-events-none"
-                  style={{ boxShadow:'inset 0 0 8px rgba(255,107,0,0.2)' }}/>
+                  className="w-12 h-12 rounded-xl object-cover relative"
+                  style={{
+                    border: '2.5px solid rgba(255,107,0,0.75)',
+                    boxShadow: '0 0 20px rgba(255,107,0,0.55), 0 0 0 1px rgba(123,0,255,0.4)',
+                    zIndex: 1,
+                  }}/>
+                {/* Neon corner brackets */}
+                {[{t:0,l:0,bT:'#FF6B00',bL:'#FF6B00'},{t:0,r:0,bT:'#7B00FF',bR:'#7B00FF'},{b:0,l:0,bB:'#FF9F0A',bL:'#FF9F0A'},{b:0,r:0,bB:'#FF3B30',bR:'#FF3B30'}].map((s,i) => (
+                  <div key={i} className="absolute pointer-events-none" style={{
+                    top:s.t, left:s.l, bottom:s.b, right:s.r, width:8, height:8,
+                    borderTop: s.bT ? `2px solid ${s.bT}` : undefined,
+                    borderLeft: s.bL ? `2px solid ${s.bL}` : undefined,
+                    borderBottom: s.bB ? `2px solid ${s.bB}` : undefined,
+                    borderRight: s.bR ? `2px solid ${s.bR}` : undefined,
+                  }}/>
+                ))}
               </div>
             ) : (
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl leading-none"
-                style={{ background:'linear-gradient(135deg,rgba(255,107,0,0.25),rgba(123,0,255,0.2))', border:'2px solid rgba(255,107,0,0.5)', boxShadow:'0 0 16px rgba(255,107,0,0.3)' }}>
-                👨‍🏫
+              <div className="relative">
+                <svg style={{ position:'absolute', overflow:'visible', pointerEvents:'none', top:-4, left:-4 }} width="52" height="52" aria-hidden>
+                  <ellipse cx="-2" cy="-2" rx="11" ry="7" fill="#FF6B00" opacity="0.55" transform="rotate(-15,-2,-2)"/>
+                  <ellipse cx="54" cy="54" rx="9" ry="6" fill="#7B00FF" opacity="0.50"/>
+                </svg>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl leading-none relative"
+                  style={{
+                    background:'linear-gradient(135deg,rgba(255,107,0,0.3),rgba(123,0,255,0.25))',
+                    border:'2.5px solid rgba(255,107,0,0.65)',
+                    boxShadow:'0 0 20px rgba(255,107,0,0.45), 0 0 0 1px rgba(123,0,255,0.3)',
+                    zIndex:1,
+                  }}>
+                  👨‍🏫
+                </div>
               </div>
             )}
           </div>
 
+          {/* Text content */}
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color:'rgba(255,107,0,0.6)' }}>
-              ▸ FROM TEACHER
-            </p>
-            <p className="text-sm leading-relaxed" style={{ color:'rgba(255,255,255,0.88)' }}>
+            {/* "FROM TEACHER" label */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="h-px flex-1" style={{ background:'linear-gradient(90deg,rgba(255,107,0,0.5),transparent)' }}/>
+              <span className="text-[9px] font-black uppercase tracking-[0.25em]"
+                style={{ color:'rgba(255,107,0,0.65)' }}>
+                FROM TEACHER
+              </span>
+              <div className="h-px flex-1" style={{ background:'linear-gradient(90deg,transparent,rgba(255,107,0,0.5))' }}/>
+            </div>
+
+            {/* Message text */}
+            <p className="text-sm leading-relaxed font-medium" style={{ color:'rgba(255,255,255,0.92)' }}>
               {note}
             </p>
-            {/* Paint stroke decoration */}
-            <div className="mt-2 flex gap-1.5">
-              {['#FF6B00','#FFD700','#7B00FF'].map((c,i) => (
-                <div key={i} className="h-1 rounded-full" style={{ width: 20+i*12, background:c, opacity:0.5 }}/>
+
+            {/* Paint stroke bar decoration */}
+            <div className="mt-2.5 flex items-center gap-1">
+              {[
+                { w:28, c:'#FF6B00', op:0.7 },
+                { w:18, c:'#FFD700', op:0.55 },
+                { w:22, c:'#7B00FF', op:0.6 },
+                { w:14, c:'#FF3B30', op:0.5 },
+                { w:8,  c:'#FF9F0A', op:0.45 },
+              ].map((s,i) => (
+                <div key={i} className="rounded-full" style={{ width:s.w, height:3, background:s.c, opacity:s.op }}/>
               ))}
+              <span className="ml-1 text-[9px] font-black" style={{ color:'rgba(255,107,0,0.4)' }}>▮▮▮</span>
             </div>
           </div>
         </div>
