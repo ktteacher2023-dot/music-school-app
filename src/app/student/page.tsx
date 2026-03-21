@@ -18,6 +18,7 @@ import AvatarUploader from '@/components/AvatarUploader';
 import { uploadStudentAvatar, fetchTeacherAvatarFromSupabase } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 import MusicQuizGame from '@/components/MusicQuizGame';
+import MelodyQuizGame from '@/components/MelodyQuizGame';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -38,6 +39,7 @@ const INIT: MonsterState = {
 const MS_KEY          = 'monster_state_v2'; // v2: new fields
 const LAST_ATTACK_KEY  = 'last_attack_date';
 const MUSIC_GAME_KEY   = 'music_quiz_last_played';
+const MELODY_GAME_KEY  = 'melody_quiz_last_played';
 const ROLE_KEY         = 'app_role';
 
 function loadMS(): MonsterState {
@@ -1298,9 +1300,12 @@ export default function StudentPage() {
   const [noteIsNew,        setNoteIsNew]        = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
 
-  // music quiz game
-  const [showMusicGame,    setShowMusicGame]    = useState(false);
-  const [gamePlayedToday,  setGamePlayedToday]  = useState(false);
+  // music quiz game (single-note)
+  const [showMusicGame,      setShowMusicGame]      = useState(false);
+  const [gamePlayedToday,    setGamePlayedToday]    = useState(false);
+  // melody quiz game
+  const [showMelodyGame,     setShowMelodyGame]     = useState(false);
+  const [melodyPlayedToday,  setMelodyPlayedToday]  = useState(false);
 
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
@@ -1326,6 +1331,7 @@ export default function StudentPage() {
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
     setGamePlayedToday(localStorage.getItem(MUSIC_GAME_KEY) === todayStr());
+    setMelodyPlayedToday(localStorage.getItem(MELODY_GAME_KEY) === todayStr());
     // Load current badges; if expression badge was just awarded by teacher, celebrate
     const currentBadges = getBadges().map(b => b.id);
     setMyBadges(currentBadges);
@@ -1497,6 +1503,20 @@ export default function StudentPage() {
     if (newLevel > ms.level) setTimeout(() => setLevelUpVal(newLevel), 300);
   };
 
+  // Melody game end handler (same EXP logic as handleGameEnd)
+  const handleMelodyGameEnd = (expGained: number) => {
+    setShowMelodyGame(false);
+    localStorage.setItem(MELODY_GAME_KEY, today);
+    setMelodyPlayedToday(true);
+    if (expGained <= 0) return;
+    const newTotalXp = ms.totalXp + expGained;
+    const newLevel   = calcLevel(newTotalXp);
+    const next: MonsterState = { ...ms, totalXp: newTotalXp, level: newLevel };
+    setMs(next); saveMS(next);
+    syncStatsToSupabase(newTotalXp, newLevel, ms.monstersDefeated, ms.streak);
+    if (newLevel > ms.level) setTimeout(() => setLevelUpVal(newLevel), 300);
+  };
+
   // Fire-and-forget: sync game stats to Supabase profiles table
   const syncStatsToSupabase = (xp: number, lv: number, defeated: number, streak: number) => {
     if (!supabase) return;
@@ -1547,6 +1567,11 @@ export default function StudentPage() {
       {/* Music quiz game */}
       {showMusicGame && (
         <MusicQuizGame isPrincess={isPrincess} onGameEnd={handleGameEnd}/>
+      )}
+
+      {/* Melody quiz game */}
+      {showMelodyGame && (
+        <MelodyQuizGame isPrincess={isPrincess} onGameEnd={handleMelodyGameEnd}/>
       )}
 
       {/* Header */}
@@ -2031,6 +2056,40 @@ export default function StudentPage() {
                   animation: 'floatBounce 3s ease-in-out infinite',
                 }}>
                 {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
+              </button>
+            )}
+
+            {/* Melody quiz game button / already-played message */}
+            {melodyPlayedToday ? (
+              <div className="w-full rounded-2xl py-3 px-4 text-center"
+                style={{
+                  background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
+                  border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
+                }}>
+                <p className="text-sm font-black mb-0.5" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
+                  {isPrincess ? '🎵 今日のメロディ魔法は使い果たしたわ' : '🎼 今日のメロディ音撃は終了だ！'}
+                </p>
+                <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
+                  {isPrincess
+                    ? '明日になればまたメロディ魔法が使えるわ！'
+                    : '明日また腕試しだ！'}
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowMelodyGame(true)}
+                className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                style={{
+                  background: isPrincess
+                    ? 'linear-gradient(135deg,#9B59B6,#FF6B9D)'
+                    : 'linear-gradient(135deg,#0066FF,#00C6FF)',
+                  boxShadow: isPrincess
+                    ? '0 4px 20px rgba(155,89,182,0.5)'
+                    : '0 4px 20px rgba(0,102,255,0.5)',
+                  border: 'none', cursor: 'pointer',
+                  animation: 'floatBounce 3s ease-in-out infinite',
+                }}>
+                {isPrincess ? '🎵 メロディ魔法パズルに挑戦！' : '🎼 メロディ音撃バトルに挑戦！'}
               </button>
             )}
 
