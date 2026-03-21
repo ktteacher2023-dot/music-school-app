@@ -920,7 +920,8 @@ export default function StudentPage() {
         </div>
       </header>
 
-      <div className="relative z-10 px-4 pt-4 pb-6 space-y-4">
+      <div className="relative z-10 px-4 pt-4 space-y-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
 
         {/* ── Name plate ── */}
         {mounted && nickname && (
