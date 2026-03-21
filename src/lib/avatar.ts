@@ -68,15 +68,41 @@ export function getTeacherAvatarUrl(): string | null {
   return localStorage.getItem(TEACHER_KEY);
 }
 
-/** Crops + uploads teacher avatar, saves to localStorage. Returns URL. */
+/** Crops + uploads teacher avatar, saves to localStorage + Supabase teacher_settings. Returns URL. */
 export async function uploadTeacherAvatar(file: File): Promise<string | null> {
   try {
     const blob = await cropToSquare(file);
-    const url = await uploadBlob(blob, `teachers/${Date.now()}.jpg`);
+    // Fixed path — always overwrites the previous teacher photo
+    const url = await uploadBlob(blob, `teachers/main.jpg`);
     localStorage.setItem(TEACHER_KEY, url);
+    // Sync to Supabase so students on other devices can fetch it
+    if (supabase) {
+      try {
+        await supabase.from('teacher_settings')
+          .upsert({ id: 'main', avatar_url: url, updated_at: new Date().toISOString() });
+      } catch (e) { console.warn('[avatar] teacher_settings sync failed:', e); }
+    }
     return url;
   } catch (e) {
     console.warn('[avatar] uploadTeacherAvatar failed:', e);
+    return null;
+  }
+}
+
+/** Fetches teacher avatar URL from Supabase teacher_settings (cross-device sync). */
+export async function fetchTeacherAvatarFromSupabase(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await supabase
+      .from('teacher_settings')
+      .select('avatar_url')
+      .eq('id', 'main')
+      .maybeSingle();
+    const url: string | null = result?.data?.avatar_url ?? null;
+    if (url) localStorage.setItem(TEACHER_KEY, url);
+    return url;
+  } catch {
     return null;
   }
 }

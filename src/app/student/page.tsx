@@ -15,7 +15,7 @@ import { getTheme } from '@/lib/theme';
 import { COMPANIONS } from '@/lib/companionData';
 import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/lib/badges';
 import AvatarUploader from '@/components/AvatarUploader';
-import { uploadStudentAvatar } from '@/lib/avatar';
+import { uploadStudentAvatar, fetchTeacherAvatarFromSupabase } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -827,36 +827,67 @@ function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
           </div>
 
           {/* Message body */}
-          <div className="relative z-10 flex items-start gap-3 px-4 pt-3 pb-4">
-            {/* Teacher avatar */}
-            <div className="shrink-0">
+          <div className="relative z-10 flex items-start gap-3.5 px-4 pt-3 pb-4">
+            {/* Teacher avatar – gold portrait brooch */}
+            <div className="shrink-0 relative" style={{ width:56, height:56 }}>
+              {/* Outer aura glow */}
+              <div className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ boxShadow:'0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(199,125,255,0.3)', borderRadius:'50%' }}/>
+              {/* Gold ornate frame ring */}
+              <svg className="absolute pointer-events-none select-none" style={{ top:-6,left:-6,zIndex:2 }} width="68" height="68" viewBox="0 0 68 68">
+                {/* Outer decorative ring */}
+                <circle cx="34" cy="34" r="32" fill="none" stroke="url(#goldRing)" strokeWidth="2.5" opacity="0.9"/>
+                {/* Inner ring */}
+                <circle cx="34" cy="34" r="26" fill="none" stroke="url(#goldRing)" strokeWidth="1" opacity="0.5"/>
+                {/* Gem dots at N/E/S/W */}
+                <circle cx="34" cy="2"  r="3.5" fill="#FFD700" filter="url(#gemGlow)"/>
+                <circle cx="66" cy="34" r="3.5" fill="#C77DFF" filter="url(#gemGlow)"/>
+                <circle cx="34" cy="66" r="3.5" fill="#FFB7C5" filter="url(#gemGlow)"/>
+                <circle cx="2"  cy="34" r="3.5" fill="#87CEEB" filter="url(#gemGlow)"/>
+                {/* Diagonal gem dots */}
+                <circle cx="11" cy="11" r="2" fill="#FFD700" opacity="0.7"/>
+                <circle cx="57" cy="11" r="2" fill="#C77DFF" opacity="0.7"/>
+                <circle cx="11" cy="57" r="2" fill="#87CEEB" opacity="0.7"/>
+                <circle cx="57" cy="57" r="2" fill="#FFB7C5" opacity="0.7"/>
+                <defs>
+                  <linearGradient id="goldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%"   stopColor="#FFD700"/>
+                    <stop offset="40%"  stopColor="#FFFAAA"/>
+                    <stop offset="70%"  stopColor="#FF9500"/>
+                    <stop offset="100%" stopColor="#FFD700"/>
+                  </linearGradient>
+                  <filter id="gemGlow" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+              </svg>
+              {/* Photo or fallback */}
               {teacherAvatar ? (
-                <div className="relative">
-                  <img src={teacherAvatar} alt="teacher"
-                    className="w-11 h-11 rounded-full object-cover"
-                    style={{ border:'2px solid rgba(255,215,0,0.6)', boxShadow:'0 0 16px rgba(199,125,255,0.5)' }}/>
-                  {/* Magic mirror ring */}
-                  <div className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{ border:'1px solid rgba(255,215,0,0.4)', boxShadow:'inset 0 0 8px rgba(199,125,255,0.3)' }}/>
-                  <span className="absolute -top-1.5 -right-1.5 text-[10px]"
-                    style={{ animation:'twinkle 2s ease-in-out infinite' }}>✦</span>
-                </div>
+                <img src={teacherAvatar} alt="teacher"
+                  className="w-full h-full rounded-full object-cover"
+                  style={{ border:'3px solid rgba(255,215,0,0.8)', boxShadow:'0 0 14px rgba(199,125,255,0.5)', position:'relative', zIndex:1 }}/>
               ) : (
-                <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl leading-none"
-                  style={{ background:'linear-gradient(135deg,rgba(255,215,0,0.3),rgba(199,125,255,0.3))', border:'2px solid rgba(255,215,0,0.5)', boxShadow:'0 0 16px rgba(199,125,255,0.4)' }}>
-                  👩‍🏫
+                <div className="w-full h-full rounded-full flex items-center justify-center text-2xl leading-none"
+                  style={{ background:'linear-gradient(135deg,rgba(255,215,0,0.35),rgba(199,125,255,0.35))', border:'3px solid rgba(255,215,0,0.7)', boxShadow:'0 0 14px rgba(199,125,255,0.5)', position:'relative', zIndex:1 }}>
+                  🧚
                 </div>
               )}
+              {/* Sparkle at top-right */}
+              <span className="absolute select-none pointer-events-none" style={{ top:-4, right:-4, fontSize:12, color:'#FFD700', animation:'twinkle 1.8s ease-in-out infinite', zIndex:3 }}>✦</span>
+              <span className="absolute select-none pointer-events-none" style={{ bottom:-2, left:-4, fontSize:9, color:'#C77DFF', animation:'twinkle 2.4s 0.6s ease-in-out infinite', zIndex:3 }}>✦</span>
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black mb-1" style={{ color:'rgba(199,125,255,0.65)' }}>先生より ✦</p>
-              <p className="text-sm leading-relaxed font-medium" style={{ color:'#4a004a' }}>
+              <p className="text-[10px] font-black mb-1.5" style={{ color:'rgba(199,125,255,0.7)' }}>
+                ✦ 先生より ✦
+              </p>
+              <p className="text-sm leading-relaxed font-medium" style={{ color:'#3d004d' }}>
                 {note}
               </p>
               {/* Wax seal */}
               <div className="flex justify-end mt-2">
-                <span className="text-xl leading-none" style={{ filter:'drop-shadow(0 0 6px rgba(255,107,157,0.7))', animation:'floatBounce 3s ease-in-out infinite' }}>🌸</span>
+                <span className="text-xl leading-none" style={{ filter:'drop-shadow(0 0 8px rgba(255,107,157,0.8))', animation:'floatBounce 3s ease-in-out infinite' }}>🌸</span>
               </div>
             </div>
           </div>
@@ -951,52 +982,49 @@ function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
 
         {/* ── Message body ── */}
         <div className="flex items-start gap-3.5 px-4 py-3.5">
-          {/* Teacher avatar – ink-splattered frame */}
-          <div className="shrink-0 relative">
+          {/* Teacher avatar – circular ink sticker */}
+          <div className="shrink-0 relative" style={{ width:56, height:56 }}>
+            {/* Large ink explosion blobs behind the circle */}
+            <svg style={{ position:'absolute', overflow:'visible', pointerEvents:'none', top:0, left:0, zIndex:0 }}
+              width="56" height="56" aria-hidden>
+              <ellipse cx="-4" cy="-4" rx="18" ry="10" fill="#FF6B00" opacity="0.72" transform="rotate(-20,-4,-4)"/>
+              <ellipse cx="60" cy="-3" rx="15" ry="9"  fill="#7B00FF" opacity="0.65" transform="rotate(15,60,-3)"/>
+              <ellipse cx="-3" cy="60" rx="14" ry="8"  fill="#FF9F0A" opacity="0.60" transform="rotate(10,-3,60)"/>
+              <ellipse cx="60" cy="60" rx="13" ry="8"  fill="#FF3B30" opacity="0.58" transform="rotate(-8,60,60)"/>
+              {/* splatter dots */}
+              <circle cx="50" cy="-8" r="4"  fill="#FFD700" opacity="0.75"/>
+              <circle cx="-8" cy="28" r="3"  fill="#FF6B00" opacity="0.68"/>
+              <circle cx="64" cy="42" r="3.5" fill="#7B00FF" opacity="0.62"/>
+              <circle cx="20" cy="64" r="4"  fill="#FF3B30" opacity="0.65"/>
+              <circle cx="-5" cy="50" r="2.5" fill="#FF9F0A" opacity="0.58"/>
+            </svg>
+            {/* Neon circle border ring */}
+            <div className="absolute inset-0 rounded-full pointer-events-none" style={{ zIndex:2,
+              border:'3px solid rgba(255,107,0,0.9)',
+              boxShadow:'0 0 16px rgba(255,107,0,0.8), 0 0 32px rgba(255,107,0,0.45), 0 0 0 1.5px rgba(123,0,255,0.55), inset 0 0 10px rgba(255,107,0,0.2)',
+            }}/>
+            {/* Photo or squid fallback */}
             {teacherAvatar ? (
-              <div className="relative">
-                {/* Ink splat behind avatar */}
-                <svg style={{ position:'absolute', overflow:'visible', pointerEvents:'none', top:-4, left:-4 }} width="52" height="52" aria-hidden>
-                  <ellipse cx="-2" cy="-2" rx="12" ry="7" fill="#FF6B00" opacity="0.6" transform="rotate(-15,-2,-2)"/>
-                  <ellipse cx="54" cy="-1" rx="10" ry="6" fill="#7B00FF" opacity="0.55" transform="rotate(12,54,-1)"/>
-                  <ellipse cx="-1" cy="54" rx="9" ry="6" fill="#FF9F0A" opacity="0.50" transform="rotate(8,-1,54)"/>
-                  <circle cx="54" cy="54" r="5" fill="#FF3B30" opacity="0.48"/>
-                </svg>
-                <img src={teacherAvatar} alt="teacher"
-                  className="w-12 h-12 rounded-xl object-cover relative"
-                  style={{
-                    border: '2.5px solid rgba(255,107,0,0.75)',
-                    boxShadow: '0 0 20px rgba(255,107,0,0.55), 0 0 0 1px rgba(123,0,255,0.4)',
-                    zIndex: 1,
-                  }}/>
-                {/* Neon corner brackets */}
-                {[{t:0,l:0,bT:'#FF6B00',bL:'#FF6B00'},{t:0,r:0,bT:'#7B00FF',bR:'#7B00FF'},{b:0,l:0,bB:'#FF9F0A',bL:'#FF9F0A'},{b:0,r:0,bB:'#FF3B30',bR:'#FF3B30'}].map((s,i) => (
-                  <div key={i} className="absolute pointer-events-none" style={{
-                    top:s.t, left:s.l, bottom:s.b, right:s.r, width:8, height:8,
-                    borderTop: s.bT ? `2px solid ${s.bT}` : undefined,
-                    borderLeft: s.bL ? `2px solid ${s.bL}` : undefined,
-                    borderBottom: s.bB ? `2px solid ${s.bB}` : undefined,
-                    borderRight: s.bR ? `2px solid ${s.bR}` : undefined,
-                  }}/>
-                ))}
-              </div>
+              <img src={teacherAvatar} alt="teacher"
+                className="w-full h-full rounded-full object-cover"
+                style={{ position:'relative', zIndex:1 }}/>
             ) : (
-              <div className="relative">
-                <svg style={{ position:'absolute', overflow:'visible', pointerEvents:'none', top:-4, left:-4 }} width="52" height="52" aria-hidden>
-                  <ellipse cx="-2" cy="-2" rx="11" ry="7" fill="#FF6B00" opacity="0.55" transform="rotate(-15,-2,-2)"/>
-                  <ellipse cx="54" cy="54" rx="9" ry="6" fill="#7B00FF" opacity="0.50"/>
-                </svg>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl leading-none relative"
-                  style={{
-                    background:'linear-gradient(135deg,rgba(255,107,0,0.3),rgba(123,0,255,0.25))',
-                    border:'2.5px solid rgba(255,107,0,0.65)',
-                    boxShadow:'0 0 20px rgba(255,107,0,0.45), 0 0 0 1px rgba(123,0,255,0.3)',
-                    zIndex:1,
-                  }}>
-                  👨‍🏫
-                </div>
+              <div className="w-full h-full rounded-full flex items-center justify-center text-2xl leading-none"
+                style={{
+                  background:'linear-gradient(135deg,rgba(10,4,22,0.95),rgba(20,8,44,0.95))',
+                  position:'relative', zIndex:1,
+                }}>
+                🦑
               </div>
             )}
+            {/* "SENSEI" arc text effect – small badge */}
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 pointer-events-none select-none"
+              style={{ zIndex:3 }}>
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                style={{ background:'linear-gradient(90deg,#FF6B00,#FFD700)', color:'rgba(0,0,0,0.8)', letterSpacing:'0.1em', boxShadow:'0 0 8px rgba(255,107,0,0.7)' }}>
+                SENSEI
+              </span>
+            </div>
           </div>
 
           {/* Text content */}
@@ -1312,7 +1340,9 @@ export default function StudentPage() {
       if (updatedAt > seenAt && updatedAt > 0) setNoteIsNew(true);
       localStorage.setItem(`lesson_notes_seen_at_${nick}`, Date.now().toString());
     }
+    // Load teacher avatar: localStorage first (instant), then Supabase (fresh/cross-device)
     setTeacherAvatarUrl(localStorage.getItem('teacher_avatar_url'));
+    fetchTeacherAvatarFromSupabase().then(url => { if (url) setTeacherAvatarUrl(url); }, () => {});
     // Also attempt fresher data from Supabase
     if (supabase) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
