@@ -25,7 +25,7 @@ body {
 body {
   background: #F2F2F7;
   color: #1C1C1E;
-  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-mplus), 'M PLUS Rounded 1c', -apple-system, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -61,6 +61,26 @@ input[type='number']::-webkit-outer-spin-button {
   30%       { filter: brightness(3) saturate(0); }
 }
 
+/* ── Level-up particle burst (8 directions) ─── */
+@keyframes pb1 { to { transform: translate(-90px,-130px) scale(0); opacity:0; } }
+@keyframes pb2 { to { transform: translate( 90px,-130px) scale(0); opacity:0; } }
+@keyframes pb3 { to { transform: translate(-140px, -40px) scale(0); opacity:0; } }
+@keyframes pb4 { to { transform: translate( 140px, -40px) scale(0); opacity:0; } }
+@keyframes pb5 { to { transform: translate( -60px,-160px) scale(0); opacity:0; } }
+@keyframes pb6 { to { transform: translate(  60px,-160px) scale(0); opacity:0; } }
+@keyframes pb7 { to { transform: translate(-110px,  80px) scale(0); opacity:0; } }
+@keyframes pb8 { to { transform: translate( 110px,  80px) scale(0); opacity:0; } }
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px currentColor; }
+  50%       { box-shadow: 0 0 24px currentColor, 0 0 48px currentColor; }
+}
+
 @keyframes sparkle {
   0%, 100% { opacity: 1;   transform: scale(1)    rotate(0deg); }
   25%       { opacity: 0.7; transform: scale(1.25) rotate(8deg); }
@@ -85,4 +105,15 @@ input[type='number']::-webkit-outer-spin-button {
   --animate-sparkle:      sparkle     1.8s ease-in-out infinite;
   --animate-twinkle:      twinkle     2s   ease-in-out infinite;
   --animate-float-bounce: floatBounce 3s   ease-in-out infinite;
+  --animate-shimmer:      shimmer     1.8s ease infinite;
 }
+
+/* Particle burst utility classes */
+.particle-1 { animation: pb1 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-2 { animation: pb2 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-3 { animation: pb3 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-4 { animation: pb4 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-5 { animation: pb5 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-6 { animation: pb6 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-7 { animation: pb7 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.particle-8 { animation: pb8 0.9s cubic-bezier(0,0,0.2,1) forwards; }
