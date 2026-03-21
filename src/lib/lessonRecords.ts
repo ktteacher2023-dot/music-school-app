@@ -17,10 +17,13 @@ export async function uploadLessonVideo(
 ): Promise<{ url: string | null; error: string | null }> {
   if (!supabase) return { url: null, error: 'Supabase未接続（環境変数を確認）' };
 
-  const ext  = file.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'mp4';
-  const ts   = Date.now();
-  const rand = Math.random().toString(36).slice(2, 8);
-  const path = `lessons/${ts}_${rand}.${ext}`;
+  // SAFETY: strip ALL non-ASCII from every component — no Japanese allowed in Storage keys
+  const rawExt = file.name.split('.').pop() ?? 'mp4';
+  const ext    = rawExt.replace(/[^a-zA-Z0-9]/g, '') || 'mp4';
+  const ts     = Date.now();
+  const rand   = Math.random().toString(36).slice(2, 8);
+  // Path: records/{timestamp}_{random}.{ext}  — 100% ASCII, no user-supplied strings
+  const path   = `records/${ts}_${rand}.${ext}`;
 
   const { error: upErr } = await supabase.storage
     .from('lesson-records')            // ← bucket name: lesson-records
