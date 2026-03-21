@@ -1,11 +1,12 @@
-// Staff lines are at y = [40, 52, 64, 76, 88] in the SVG
-// Lines represent (bottom→top): E4=88, G4=76, B4=64, D5=52, F5=40
-// Note Y positions:
-//   C4(ド)=100(+ledger), D4(レ)=94, E4(ミ)=88, F4(ファ)=82
-//   G4(ソ)=76, A4(ラ)=70, B4(シ)=64, C5(高ド)=58
+// Staff SVG: lines at y = [40, 52, 64, 76, 88]
+// Note Y positions on treble clef:
+//   C4=100(+ledger), D4=94, E4=88, F4=82, G4=76,
+//   A4=70, B4=64, C5=58, D5=52, E5=46, F5=40
 
 export interface NoteQuestion {
+  id: string;
   type: 'note';
+  difficulty: number;   // 1–5
   noteY: number;
   ledgerY?: number;
   question: string;
@@ -15,7 +16,9 @@ export interface NoteQuestion {
 }
 
 export interface SymbolQuestion {
+  id: string;
   type: 'symbol';
+  difficulty: number;   // 1–5
   symbol: string;
   symbolSize: number;
   question: string;
@@ -27,120 +30,208 @@ export interface SymbolQuestion {
 export type MusicQuestion = NoteQuestion | SymbolQuestion;
 
 export const ALL_QUESTIONS: MusicQuestion[] = [
-  // ─── 音符 (Notes) ───
+
+  // ─── 難易度1: ド〜ソ + シャープ・フラット ───────────────────────────────
   {
-    type: 'note', noteY: 100, ledgerY: 100,
+    id: 'n-c4', type: 'note', difficulty: 1,
+    noteY: 100, ledgerY: 100,
     question: 'この音符は何の音？',
     choices: ['ド', 'レ', 'シ', 'ミ'], correctIndex: 0,
-    explanation: '五線の下に「加線（かせん）」が1本ある音がド（C）です！',
+    explanation: '五線の下に「加線」が1本ある音がド（C）です！',
   },
   {
-    type: 'note', noteY: 94,
+    id: 'n-d4', type: 'note', difficulty: 1,
+    noteY: 94,
     question: 'この音符は何の音？',
     choices: ['ミ', 'ド', 'レ', 'シ'], correctIndex: 2,
-    explanation: '五線の一番下の線のすぐ下の空間がレ（D）です！',
+    explanation: '一番下の線のすぐ下の空間がレ（D）です！',
   },
   {
-    type: 'note', noteY: 88,
+    id: 'n-e4', type: 'note', difficulty: 1,
+    noteY: 88,
     question: 'この音符は何の音？',
     choices: ['ド', 'ミ', 'ファ', 'レ'], correctIndex: 1,
-    explanation: '五線の一番下の線の上の音がミ（E）です！',
+    explanation: '一番下の線の上の音がミ（E）です！',
   },
   {
-    type: 'note', noteY: 82,
+    id: 'n-f4', type: 'note', difficulty: 1,
+    noteY: 82,
     question: 'この音符は何の音？',
     choices: ['ソ', 'レ', 'ミ', 'ファ'], correctIndex: 3,
     explanation: '1番目と2番目の線の間の音がファ（F）です！',
   },
   {
-    type: 'note', noteY: 76,
+    id: 'n-g4', type: 'note', difficulty: 1,
+    noteY: 76,
     question: 'この音符は何の音？',
     choices: ['ソ', 'ミ', 'ファ', 'ラ'], correctIndex: 0,
     explanation: '下から2番目の線の上の音がソ（G）です！',
   },
   {
-    type: 'note', noteY: 70,
+    id: 's-sharp', type: 'symbol', difficulty: 1,
+    symbol: '♯', symbolSize: 72,
+    question: 'この記号の名前は？',
+    choices: ['フラット', 'ナチュラル', 'シャープ', 'フェルマータ'], correctIndex: 2,
+    explanation: '♯は「シャープ」！その音を半音高くします。',
+  },
+  {
+    id: 's-flat', type: 'symbol', difficulty: 1,
+    symbol: '♭', symbolSize: 72,
+    question: 'この記号の名前は？',
+    choices: ['フラット', 'シャープ', 'ナチュラル', 'アクセント'], correctIndex: 0,
+    explanation: '♭は「フラット」！その音を半音低くします。',
+  },
+
+  // ─── 難易度2: ラ〜高いド + f/p/♮ ────────────────────────────────────────
+  {
+    id: 'n-a4', type: 'note', difficulty: 2,
+    noteY: 70,
     question: 'この音符は何の音？',
     choices: ['シ', 'ラ', 'ファ', 'ソ'], correctIndex: 1,
     explanation: '2番目と3番目の線の間の音がラ（A）です！',
   },
   {
-    type: 'note', noteY: 64,
+    id: 'n-b4', type: 'note', difficulty: 2,
+    noteY: 64,
     question: 'この音符は何の音？',
     choices: ['シ', 'ソ', 'ラ', 'ド'], correctIndex: 0,
-    explanation: '五線の真ん中（3本目）の線の上の音がシ（B）です！',
+    explanation: '五線の真ん中（3本目）の線の上がシ（B）です！',
   },
   {
-    type: 'note', noteY: 58,
+    id: 'n-c5', type: 'note', difficulty: 2,
+    noteY: 58,
     question: 'この音符は何の音？',
     choices: ['レ', 'ド', 'シ', 'ラ'], correctIndex: 1,
     explanation: '3番目と4番目の線の間の音が高いド（C5）です♪',
   },
-
-  // ─── 記号 (Symbols) ───
   {
-    type: 'symbol', symbol: '♯', symbolSize: 72,
-    question: 'この記号の名前は？',
-    choices: ['フラット', 'ナチュラル', 'シャープ', 'フェルマータ'], correctIndex: 2,
-    explanation: '♯は「シャープ」！その音を半音（はんおん）高くします。',
-  },
-  {
-    type: 'symbol', symbol: '♭', symbolSize: 72,
-    question: 'この記号の名前は？',
-    choices: ['フラット', 'シャープ', 'ナチュラル', 'アクセント'], correctIndex: 0,
-    explanation: '♭は「フラット」！その音を半音（はんおん）低くします。',
-  },
-  {
-    type: 'symbol', symbol: '♮', symbolSize: 72,
-    question: 'この記号の名前は？',
-    choices: ['シャープ', 'フラット', 'ナチュラル', 'フォルテ'], correctIndex: 2,
-    explanation: '♮は「ナチュラル」！シャープ・フラットを取り消して元の音に戻します。',
-  },
-  {
-    type: 'symbol', symbol: 'f', symbolSize: 80,
+    id: 's-forte', type: 'symbol', difficulty: 2,
+    symbol: 'f', symbolSize: 80,
     question: 'この記号はどんな意味？',
     choices: ['弱く', '強く', 'だんだん強く', 'だんだん遅く'], correctIndex: 1,
     explanation: '「f（フォルテ）」は強く・大きな音で弾く記号です！',
   },
   {
-    type: 'symbol', symbol: 'p', symbolSize: 80,
+    id: 's-piano', type: 'symbol', difficulty: 2,
+    symbol: 'p', symbolSize: 80,
     question: 'この記号はどんな意味？',
     choices: ['強く', 'だんだん遅く', '弱く', 'だんだん速く'], correctIndex: 2,
     explanation: '「p（ピアノ）」は弱く・小さな音で弾く記号です！',
   },
   {
-    type: 'symbol', symbol: 'ff', symbolSize: 64,
+    id: 's-natural', type: 'symbol', difficulty: 2,
+    symbol: '♮', symbolSize: 72,
+    question: 'この記号の名前は？',
+    choices: ['シャープ', 'フラット', 'ナチュラル', 'フォルテ'], correctIndex: 2,
+    explanation: '♮は「ナチュラル」！シャープ・フラットを取り消して元の音に戻します。',
+  },
+
+  // ─── 難易度3: 高いレ〜ミ + ff/pp/mf/mp ──────────────────────────────────
+  {
+    id: 'n-d5', type: 'note', difficulty: 3,
+    noteY: 52,
+    question: 'この音符は何の音？',
+    choices: ['ド', '高いレ', 'シ', '高いミ'], correctIndex: 1,
+    explanation: '下から4番目の線の上が高いレ（D5）です！',
+  },
+  {
+    id: 'n-e5', type: 'note', difficulty: 3,
+    noteY: 46,
+    question: 'この音符は何の音？',
+    choices: ['高いレ', '高いミ', '高いファ', 'ド'], correctIndex: 1,
+    explanation: '4番目と5番目の線の間が高いミ（E5）です！',
+  },
+  {
+    id: 's-ff', type: 'symbol', difficulty: 3,
+    symbol: 'ff', symbolSize: 64,
     question: 'この記号はどんな意味？',
     choices: ['少し強く', 'とても強く', '少し弱く', 'とても弱く'], correctIndex: 1,
-    explanation: '「ff（フォルテッシモ）」はとても強く（とても大きな音で）弾く記号！',
+    explanation: '「ff（フォルテッシモ）」はとても強く弾く記号！',
   },
   {
-    type: 'symbol', symbol: 'pp', symbolSize: 64,
+    id: 's-pp', type: 'symbol', difficulty: 3,
+    symbol: 'pp', symbolSize: 64,
     question: 'この記号はどんな意味？',
     choices: ['とても弱く', 'とても強く', '少し強く', '少し弱く'], correctIndex: 0,
-    explanation: '「pp（ピアニッシモ）」はとても弱く（とても小さな音で）弾く記号！',
+    explanation: '「pp（ピアニッシモ）」はとても弱く弾く記号！',
   },
   {
-    type: 'symbol', symbol: 'mf', symbolSize: 64,
+    id: 's-mf', type: 'symbol', difficulty: 3,
+    symbol: 'mf', symbolSize: 64,
     question: 'この記号はどんな意味？',
     choices: ['少し弱く', 'とても強く', '少し強く', 'とても弱く'], correctIndex: 2,
     explanation: '「mf（メゾフォルテ）」は少し強めに弾く記号です！',
   },
   {
-    type: 'symbol', symbol: '>', symbolSize: 72,
+    id: 's-mp', type: 'symbol', difficulty: 3,
+    symbol: 'mp', symbolSize: 64,
+    question: 'この記号はどんな意味？',
+    choices: ['とても弱く', '少し弱く', '少し強く', 'とても強く'], correctIndex: 1,
+    explanation: '「mp（メゾピアノ）」は少し弱めに弾く記号です！',
+  },
+
+  // ─── 難易度4: 高いファ + アクセント/rit./cresc. ─────────────────────────
+  {
+    id: 'n-f5', type: 'note', difficulty: 4,
+    noteY: 40,
+    question: 'この音符は何の音？',
+    choices: ['高いミ', '高いファ', '高いソ', '高いレ'], correctIndex: 1,
+    explanation: '五線の一番上の線の上が高いファ（F5）です！',
+  },
+  {
+    id: 's-accent', type: 'symbol', difficulty: 4,
+    symbol: '>', symbolSize: 72,
     question: 'この記号はどんな意味？',
     choices: ['だんだん遅く', 'だんだん速く', 'とても強く', 'その音だけ強く'], correctIndex: 3,
     explanation: '「>（アクセント）」はその音だけを特に強調して弾く記号！',
   },
   {
-    type: 'symbol', symbol: 'rit.', symbolSize: 38,
+    id: 's-rit', type: 'symbol', difficulty: 4,
+    symbol: 'rit.', symbolSize: 38,
     question: 'この記号はどんな意味？',
     choices: ['だんだん速く', 'だんだん遅く', 'だんだん強く', 'だんだん弱く'], correctIndex: 1,
     explanation: '「rit.（リタルダンド）」はだんだんゆっくりしていく記号！',
   },
+  {
+    id: 's-cresc', type: 'symbol', difficulty: 4,
+    symbol: 'cresc.', symbolSize: 32,
+    question: 'この記号はどんな意味？',
+    choices: ['だんだん弱く', 'だんだん強く', 'だんだん遅く', 'だんだん速く'], correctIndex: 1,
+    explanation: '「cresc.（クレッシェンド）」はだんだん強くなっていく記号！',
+  },
+
+  // ─── 難易度5: 高いソ + dim./フェルマータ/スタッカート ────────────────────
+  {
+    id: 'n-g5', type: 'note', difficulty: 5,
+    noteY: 34,
+    question: 'この音符は何の音？',
+    choices: ['高いソ', '高いファ', '高いラ', '高いミ'], correctIndex: 0,
+    explanation: '五線の一番上の線のすぐ上の空間が高いソ（G5）です！',
+  },
+  {
+    id: 's-dim', type: 'symbol', difficulty: 5,
+    symbol: 'dim.', symbolSize: 32,
+    question: 'この記号はどんな意味？',
+    choices: ['だんだん強く', 'だんだん速く', 'だんだん弱く', 'だんだん遅く'], correctIndex: 2,
+    explanation: '「dim.（ディミヌエンド）」はだんだん弱くなっていく記号！',
+  },
+  {
+    id: 's-fermata', type: 'symbol', difficulty: 5,
+    symbol: '𝄐', symbolSize: 72,
+    question: 'この記号の名前は？',
+    choices: ['アクセント', 'フェルマータ', 'スタッカート', 'テヌート'], correctIndex: 1,
+    explanation: '「𝄐（フェルマータ）」はその音符を十分に伸ばして演奏する記号！',
+  },
+  {
+    id: 's-staccato', type: 'symbol', difficulty: 5,
+    symbol: '•', symbolSize: 80,
+    question: 'この記号の名前は？',
+    choices: ['レガート', 'テヌート', 'アクセント', 'スタッカート'], correctIndex: 3,
+    explanation: '「•（スタッカート）」はその音を短く切って弾く記号！',
+  },
 ];
 
-/** Randomly pick `count` questions from the full pool */
-export function sampleQuestions(count = 5): MusicQuestion[] {
-  return [...ALL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, count);
+/** Quick lookup by ID */
+export function getQuestionById(id: string): MusicQuestion | undefined {
+  return ALL_QUESTIONS.find(q => q.id === id);
 }
