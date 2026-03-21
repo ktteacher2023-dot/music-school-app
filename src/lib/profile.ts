@@ -1,6 +1,9 @@
+export type CharacterType = 'knight' | 'princess';
+
 export interface Profile {
   nickname: string;
   birthday: string; // YYYY-MM-DD
+  type: CharacterType;
   createdAt: number;
 }
 
@@ -12,7 +15,7 @@ export function getProfile(): Profile | null {
   catch { return null; }
 }
 
-export function saveProfile(p: Omit<Profile, 'createdAt'>): Profile {
+export function saveProfile(p: Omit<Profile, 'createdAt'> & { type: CharacterType }): Profile {
   const full: Profile = { ...p, createdAt: Date.now() };
   localStorage.setItem(KEY, JSON.stringify(full));
   return full;

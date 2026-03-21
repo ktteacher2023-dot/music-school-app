@@ -10,7 +10,9 @@ import {
 } from '@/lib/gameData';
 import PracticeCard from '@/components/PracticeCard';
 import StarRating from '@/components/StarRating';
-import { getProfile } from '@/lib/profile';
+import { getProfile, type CharacterType } from '@/lib/profile';
+import { getTheme } from '@/lib/theme';
+import { COMPANIONS } from '@/lib/companionData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -55,15 +57,23 @@ function fmtSize(b: number) {
   return `${(b/1024/1024).toFixed(1)}MB`;
 }
 
-// ─── Monster face ─────────────────────────────────────────────────────────────
-function MonsterFace({ idx, hp, maxHp, shaking, defeated }:
-  { idx:number; hp:number; maxHp:number; shaking:boolean; defeated:boolean }) {
-  const m = MONSTERS[idx % MONSTERS.length];
-  if (defeated) return <div className="text-[80px] leading-none select-none grayscale opacity-50">💀</div>;
+// ─── Creature face ────────────────────────────────────────────────────────────
+function MonsterFace({ idx, hp, maxHp, shaking, defeated, charType }:
+  { idx:number; hp:number; maxHp:number; shaking:boolean; defeated:boolean; charType: CharacterType }) {
+  const isPrincess = charType === 'princess';
+  const list = isPrincess ? COMPANIONS : MONSTERS;
+  const m = list[idx % list.length];
+  if (defeated) {
+    return (
+      <div className={`text-[80px] leading-none select-none ${isPrincess ? '' : 'grayscale opacity-50'}`}>
+        {isPrincess ? '✨' : '💀'}
+      </div>
+    );
+  }
   return (
     <div className={`text-[88px] leading-none select-none
-      ${shaking?'animate-shake':''} ${hp/maxHp<0.25?'animate-pulse':''}`}>
-      {hp/maxHp < 0.25 ? '😡' : m.emoji}
+      ${shaking ? 'animate-shake' : ''} ${hp/maxHp < 0.25 ? 'animate-pulse' : ''}`}>
+      {hp/maxHp < 0.25 ? (isPrincess ? '🥺' : '😡') : m.emoji}
     </div>
   );
 }
@@ -95,9 +105,10 @@ export default function StudentPage() {
   const router = useRouter();
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const [records, setRecords]   = useState<PracticeRecord[]>([]);
-  const [mounted, setMounted]   = useState(false);
-  const [ms, setMs]             = useState<MonsterState>(INIT);
+  const [records,  setRecords]  = useState<PracticeRecord[]>([]);
+  const [mounted,  setMounted]  = useState(false);
+  const [ms,       setMs]       = useState<MonsterState>(INIT);
+  const [charType, setCharType] = useState<CharacterType>('knight');
 
   // monster anim
   const [shaking, setShaking]   = useState(false);
@@ -120,12 +131,16 @@ export default function StudentPage() {
   const load = useCallback(() => setRecords(getRecordsByDate(today)), [today]);
 
   useEffect(() => {
-    if (!getProfile()) { router.replace('/setup'); return; }
+    const p = getProfile();
+    if (!p) { router.replace('/setup'); return; }
+    setCharType(p.type ?? 'knight');
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
   }, [load, router]);
 
-  const cur     = MONSTERS[ms.monsterIndex % MONSTERS.length];
+  const theme   = getTheme(charType);
+  const creatures = theme.creatures;
+  const cur     = creatures[ms.monsterIndex % creatures.length];
   const hpPct   = ms.maxHp > 0 ? (ms.hp / ms.maxHp) * 100 : 0;
   const curLevel = calcLevel(ms.totalXp);
   const xpThis  = ms.totalXp - xpForLevel(curLevel - 1);
@@ -223,8 +238,10 @@ export default function StudentPage() {
   const handleDelete = (id: string) => { deleteRecord(id); load(); };
   const totalMins = records.reduce((s,r)=>s+r.duration,0);
 
+  const isPrincess = charType === 'princess';
+
   return (
-    <div className="min-h-screen bg-[#F2F2F7]">
+    <div className="min-h-screen" style={{ background: theme.bgPage }}>
 
       {/* Level-up modal */}
       {levelUpVal && <LevelUpModal level={levelUpVal} onClose={() => setLevelUpVal(null)} />}
@@ -256,8 +273,8 @@ export default function StudentPage() {
               <span className="text-xs font-bold text-[#FF9F0A]">Lv.{curLevel}</span>
             </div>
             <div className="flex items-center gap-1 bg-[#F2F2F7] px-2 py-1 rounded-full">
-              <span className="text-xs">🪙</span>
-              <span className="text-xs font-bold text-[#D97706]">{ms.coins}</span>
+              <span className="text-xs">{theme.coinEmoji}</span>
+              <span className="text-xs font-bold" style={{ color: theme.coinColor }}>{ms.coins}</span>
             </div>
             <button onClick={handleLogout}
               className="w-7 h-7 flex items-center justify-center rounded-full bg-[#F2F2F7] active:bg-[#E5E5EA]">
@@ -278,14 +295,14 @@ export default function StudentPage() {
           <div className="flex items-start justify-between px-4 pt-4 pb-1">
             <div>
               <p className="text-white/60 text-[10px] font-semibold tracking-widest">
-                MONSTER {(ms.monsterIndex % MONSTERS.length) + 1} / {MONSTERS.length}
-                {ms.monsterIndex >= MONSTERS.length && ` (周回${Math.floor(ms.monsterIndex/MONSTERS.length)+1})`}
+                {theme.counterPrefix} {(ms.monsterIndex % creatures.length) + 1} / {creatures.length}
+                {ms.monsterIndex >= creatures.length && ` (周回${Math.floor(ms.monsterIndex/creatures.length)+1})`}
               </p>
               <p className="text-white font-black text-xl leading-tight">{cur.name}</p>
               <p className="text-white/70 text-xs">{cur.sub}</p>
             </div>
             <div className="text-right">
-              <p className="text-white/60 text-[10px] font-semibold">HP</p>
+              <p className="text-white/60 text-[10px] font-semibold">{theme.hpLabel}</p>
               <p className="text-white font-bold text-lg tabular-nums">
                 {ms.hp}<span className="text-white/50 text-sm font-normal"> / {ms.maxHp}</span>
               </p>
@@ -303,7 +320,7 @@ export default function StudentPage() {
           {/* Monster body */}
           <div className="relative flex flex-col items-center justify-center py-6">
             <div style={{ filter:hitFlash?'brightness(3) saturate(0)':undefined }}>
-              <MonsterFace idx={ms.monsterIndex} hp={ms.hp} maxHp={ms.maxHp} shaking={shaking} defeated={showVic}/>
+              <MonsterFace idx={ms.monsterIndex} hp={ms.hp} maxHp={ms.maxHp} shaking={shaking} defeated={showVic} charType={charType}/>
             </div>
             {dmgNum !== null && (
               <div className="absolute top-0 inset-x-0 flex justify-center pointer-events-none">
@@ -313,7 +330,10 @@ export default function StudentPage() {
               </div>
             )}
             {hpPct<25 && !showVic && (
-              <span className="absolute top-1 right-3 text-[11px] bg-[#FF3B30] text-white px-2 py-0.5 rounded-full font-bold animate-pulse">ピンチ！</span>
+              <span className="absolute top-1 right-3 text-[11px] text-white px-2 py-0.5 rounded-full font-bold animate-pulse"
+                style={{ background: isPrincess ? '#C77DFF' : '#FF3B30' }}>
+                {theme.pinchLabel}
+              </span>
             )}
           </div>
 
@@ -321,11 +341,11 @@ export default function StudentPage() {
           {showVic && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
               <div className="animate-pop-in flex flex-col items-center gap-2">
-                <span className="text-7xl">🎉</span>
-                <p className="text-white font-black text-3xl drop-shadow-lg">撃破！</p>
+                <span className="text-7xl">{theme.defeatEmoji}</span>
+                <p className="text-white font-black text-3xl drop-shadow-lg">{theme.defeatLabel}</p>
                 <div className="flex gap-2 mt-1 flex-wrap justify-center">
                   <span className="bg-white/20 text-yellow-200 font-bold text-sm px-3 py-1 rounded-full">+{xpGain} XP</span>
-                  <span className="bg-white/20 text-yellow-200 font-bold text-sm px-3 py-1 rounded-full">+{coinGain} 🪙</span>
+                  <span className="bg-white/20 text-yellow-200 font-bold text-sm px-3 py-1 rounded-full">+{coinGain} {theme.coinEmoji}</span>
                 </div>
               </div>
             </div>
@@ -336,16 +356,16 @@ export default function StudentPage() {
         {mounted && (
           <div className="bg-white rounded-2xl px-4 py-3 shadow-sm space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-[#6C6C70]">経験値 (EXP)</span>
+              <span className="text-xs font-semibold text-[#6C6C70]">{theme.xpLabel}</span>
               <span className="text-xs text-[#6C6C70]">{xpThis} / {xpNext}</span>
             </div>
             <div className="h-2 bg-[#F2F2F7] rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-700"
-                style={{ width:`${xpPct}%`, background:'linear-gradient(90deg,#5856D6,#007AFF)' }}/>
+                style={{ width:`${xpPct}%`, background: theme.xpBarGradient }}/>
             </div>
             <div className="flex justify-between text-[11px] text-[#8E8E93]">
-              <span>倒した数 {ms.monstersDefeated} 体</span>
-              <span>図鑑 {ms.defeatedIds.length} / {MONSTERS.length}</span>
+              <span>{theme.enemyCountLabel} {ms.monstersDefeated} 体</span>
+              <span>{theme.encyclopediaLabel} {ms.defeatedIds.length} / {creatures.length}</span>
               <span>連続 {ms.streak}日 🔥</span>
             </div>
           </div>
@@ -356,7 +376,7 @@ export default function StudentPage() {
           <div className="bg-white rounded-2xl shadow-sm px-5 py-6 flex flex-col items-center gap-3 text-center">
             <span className="text-5xl">🌙</span>
             <p className="font-bold text-[#1C1C1E] text-base">今日の練習は完了しました！</p>
-            <p className="text-sm text-[#6C6C70]">また明日モンスターを倒そう！</p>
+            <p className="text-sm text-[#6C6C70]">{theme.completedNextMsg}</p>
             {ms.streak >= 3 && (
               <div className="mt-1 px-4 py-2 rounded-2xl"
                 style={{ background: ms.streak>=7?'#FF3B30':'#FF9F0A' }}>
@@ -376,7 +396,10 @@ export default function StudentPage() {
                 </div>
               )}
 
-              <p className="text-xs font-bold text-[#6C6C70] tracking-widest uppercase">⚔️ 練習して攻撃！</p>
+              <p className="text-xs font-bold tracking-widest uppercase"
+                style={{ color: isPrincess ? '#C77DFF' : '#6C6C70' }}>
+                {theme.arenaLabel}
+              </p>
 
               <input type="text" placeholder="曲名を入力..." value={song}
                 onChange={(e)=>setSong(e.target.value)}
@@ -428,22 +451,24 @@ export default function StudentPage() {
 
               {previewDmg > 0 && (
                 <div className="text-center">
-                  <span className="text-xs text-[#8E8E93]">予測ダメージ: </span>
-                  <span className="text-[#FF3B30] font-bold text-sm">{previewDmg}</span>
+                  <span className="text-xs text-[#8E8E93]">{theme.previewLabel}</span>
+                  <span className="font-bold text-sm" style={{ color: isPrincess ? '#FF6B9D' : '#FF3B30' }}>{previewDmg}</span>
                   {mult > 1 && <span className="text-[#FF9F0A] font-bold text-xs ml-1">（×{mult} コンボ中！）</span>}
-                  {previewDmg >= ms.hp && ms.hp > 0 && <span className="text-[#FF9F0A] font-bold text-xs ml-1">— 撃破！⚡</span>}
+                  {previewDmg >= ms.hp && ms.hp > 0 && <span className="text-[#FF9F0A] font-bold text-xs ml-1">{theme.finisherLabel}</span>}
                 </div>
               )}
             </div>
 
             <button onClick={handleAttack} disabled={!canAttack}
-              className={`w-full py-4 text-base font-black tracking-widest transition-all active:scale-[0.97]
-                ${canAttack
-                  ? mult>1
-                    ? 'bg-gradient-to-r from-[#FF3B30] to-[#FF9F0A] text-white shadow-sm'
-                    : 'bg-gradient-to-r from-[#FF3B30] to-[#FF9F0A] text-white shadow-sm'
-                  : 'bg-[#F2F2F7] text-[#C7C7CC]'}`}>
-              {streakLbl ? `🔥 ${streakLbl}で攻撃！` : videoFile ? '⚔️ 動画と一緒に攻撃！' : '⚔️ 攻撃！'}
+              className="w-full py-4 text-base font-black tracking-widest transition-all active:scale-[0.97]"
+              style={canAttack ? {
+                background: isPrincess
+                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
+                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
+                color: 'white',
+                boxShadow: isPrincess ? '0 2px 12px rgba(255,107,157,0.4)' : '0 2px 8px rgba(255,59,48,0.3)',
+              } : { background: '#F2F2F7', color: '#C7C7CC' }}>
+              {streakLbl ? theme.attackStreakLabel(streakLbl) : videoFile ? theme.attackVideoLabel : theme.attackLabel}
             </button>
           </div>
         )}
