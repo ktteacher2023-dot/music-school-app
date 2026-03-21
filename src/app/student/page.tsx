@@ -779,8 +779,8 @@ function MonsterFace({ idx, hp, maxHp, shaking, defeated, charType, accentColor 
 }
 
 // ─── Teacher message card ─────────────────────────────────────────────────────
-function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
-  note: string; isNew: boolean; teacherAvatar: string | null; isPrincess: boolean;
+function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess, teacherName }: {
+  note: string; isNew: boolean; teacherAvatar: string | null; isPrincess: boolean; teacherName?: string;
 }) {
   if (!note) return null;
 
@@ -813,7 +813,7 @@ function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
               <span className="text-lg leading-none" style={{ filter:'drop-shadow(0 0 8px rgba(255,107,157,0.7))' }}>💌</span>
               <span className="text-[11px] font-black tracking-[0.18em]"
                 style={{ background:'linear-gradient(90deg,#FF6B9D,#C77DFF,#FFD700)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                ✦ 先生からの魔法の手紙 ✦
+                {teacherName ? `✦ ${teacherName}先生からの魔法の手紙 ✦` : '✦ 先生からの魔法の手紙 ✦'}
               </span>
             </div>
             {isNew && (
@@ -1039,7 +1039,7 @@ function TeacherMessageCard({ note, isNew, teacherAvatar, isPrincess }: {
               <div className="h-px flex-1" style={{ background:'linear-gradient(90deg,rgba(255,107,0,0.5),transparent)' }}/>
               <span className="text-[9px] font-black uppercase tracking-[0.25em]"
                 style={{ color:'rgba(255,107,0,0.65)' }}>
-                FROM TEACHER
+                {teacherName ? `FROM ${teacherName}先生` : 'FROM TEACHER'}
               </span>
               <div className="h-px flex-1" style={{ background:'linear-gradient(90deg,transparent,rgba(255,107,0,0.5))' }}/>
             </div>
@@ -1296,10 +1296,11 @@ export default function StudentPage() {
   // avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // teacher message
+  // teacher message + teacher name
   const [teacherNote,      setTeacherNote]      = useState('');
   const [noteIsNew,        setNoteIsNew]        = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
+  const [teacherName,      setTeacherName]      = useState('');
 
   // music quiz game (single-note)
   const [showMusicGame,  setShowMusicGame]  = useState(false);
@@ -1381,16 +1382,23 @@ export default function StudentPage() {
       if (updatedAt > seenAt && updatedAt > 0) setNoteIsNew(true);
       localStorage.setItem(`lesson_notes_seen_at_${nick}`, Date.now().toString());
     }
+    // Load teacher name from localStorage (instant)
+    const storedTeacherName = localStorage.getItem(`teacher_name_${nick}`) ?? '';
+    if (storedTeacherName) setTeacherName(storedTeacherName);
     // Load teacher avatar: localStorage first (instant), then Supabase (fresh/cross-device)
     setTeacherAvatarUrl(localStorage.getItem('teacher_avatar_url'));
     fetchTeacherAvatarFromSupabase().then(url => { if (url) setTeacherAvatarUrl(url); }, () => {});
-    // Also attempt fresher data from Supabase
+    // Also attempt fresher data from Supabase (lesson_notes + teacher_name)
     if (supabase) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase.from('profiles').select('lesson_notes').match({ nickname: p.nickname, birthday: p.birthday }).maybeSingle().then((r: any) => {
+      supabase.from('profiles').select('lesson_notes, teacher_name').match({ nickname: p.nickname, birthday: p.birthday }).maybeSingle().then((r: any) => {
         if (r?.data?.lesson_notes && r.data.lesson_notes !== localNote) {
           setTeacherNote(r.data.lesson_notes);
           localStorage.setItem(`lesson_notes_${nick}`, r.data.lesson_notes);
+        }
+        if (r?.data?.teacher_name) {
+          setTeacherName(r.data.teacher_name);
+          localStorage.setItem(`teacher_name_${nick}`, r.data.teacher_name);
         }
       }, () => {});
     }
@@ -1730,6 +1738,7 @@ export default function StudentPage() {
             isNew={noteIsNew}
             teacherAvatar={teacherAvatarUrl}
             isPrincess={isPrincess}
+            teacherName={teacherName}
           />
         )}
 

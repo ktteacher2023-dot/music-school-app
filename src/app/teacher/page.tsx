@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
 import { Submission } from '@/types';
 import { getSubmissions, updateSubmission } from '@/lib/submissions';
@@ -561,6 +562,36 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const lv          = calcLevel(stats?.totalXp ?? 0);
   const title       = getTitle(lv);
   const cur         = MONSTERS[(stats?.monsterIndex ?? 0) % MONSTERS.length];
+  // ── Teacher name ────────────────────────────────────────────────────────────
+  const [teacherNameInput, setTeacherNameInput] = useState('');
+  const [teacherNameSaving, setTeacherNameSaving] = useState(false);
+  const [teacherNameSaved,  setTeacherNameSaved]  = useState(false);
+  // ── Login URL / QR ──────────────────────────────────────────────────────────
+  const [showQR,    setShowQR]    = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+  const loginUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/setup?nick=${encodeURIComponent(profile.nickname)}&bday=${profile.birthday}&type=${profile.type}`
+    : '';
+  const handleCopyUrl = useCallback(() => {
+    navigator.clipboard.writeText(loginUrl).then(() => {
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2500);
+    });
+  }, [loginUrl]);
+  const handleSaveTeacherName = async () => {
+    setTeacherNameSaving(true);
+    // Save to localStorage (student reads from here)
+    localStorage.setItem(`teacher_name_${profile.nickname}`, teacherNameInput);
+    // Save to Supabase
+    if (supabase) {
+      await supabase.from('profiles')
+        .update({ teacher_name: teacherNameInput })
+        .match({ nickname: profile.nickname, birthday: profile.birthday });
+    }
+    setTeacherNameSaving(false);
+    setTeacherNameSaved(true);
+    setTimeout(() => setTeacherNameSaved(false), 2500);
+  };
   // ── Lesson records (video + memo) ──────────────────────────────────────────
   const [records,       setRecords]       = useState<LessonRecord[]>([]);
   const [loadingRecs,   setLoadingRecs]   = useState(true);
@@ -575,6 +606,24 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const libraryInputRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Load current teacher name
+    const storedName = localStorage.getItem(`teacher_name_${profile.nickname}`) ?? '';
+    setTeacherNameInput(storedName);
+    // Also try Supabase for fresh value
+    if (supabase) {
+      supabase.from('profiles')
+        .select('teacher_name')
+        .match({ nickname: profile.nickname, birthday: profile.birthday })
+        .maybeSingle()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((r: any) => {
+          const name = r?.data?.teacher_name ?? '';
+          if (name) {
+            setTeacherNameInput(name);
+            localStorage.setItem(`teacher_name_${profile.nickname}`, name);
+          }
+        }, () => {});
+    }
     fetchLessonRecords(profile.nickname, profile.birthday).then(recs => {
       setRecords(recs);
       setLoadingRecs(false);
@@ -707,6 +756,129 @@ function StudentDetailModal({ profile, stats, onClose }: {
 
       {/* Content */}
       <div className="relative z-10 px-4 pt-5 pb-16 space-y-4">
+
+        {/* ── 担当講師名 ── */}
+        <div className="rounded-2xl overflow-hidden"
+          style={isPrincess ? {
+            background: 'rgba(255,255,255,0.55)',
+            border: '1px solid rgba(199,125,255,0.3)',
+          } : {
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,107,0,0.25)',
+          }}>
+          <div className="px-4 pt-3 pb-2 border-b"
+            style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(255,107,0,0.15)' }}>
+            <p className="text-[11px] font-black tracking-widest"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.7)' : 'rgba(255,107,0,0.7)' }}>
+              {isPrincess ? '✦ 担当先生の名前' : '▸ INSTRUCTOR NAME'}
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={teacherNameInput}
+              onChange={e => setTeacherNameInput(e.target.value)}
+              placeholder="例：山田"
+              className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
+              style={isPrincess ? {
+                background: 'rgba(255,240,255,0.8)',
+                color: '#3d004d',
+                border: '1px solid rgba(199,125,255,0.35)',
+              } : {
+                background: 'rgba(255,107,0,0.08)',
+                color: 'white',
+                border: '1px solid rgba(255,107,0,0.25)',
+              }}
+            />
+            <button
+              onClick={handleSaveTeacherName}
+              disabled={teacherNameSaving}
+              className="px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-[0.97]"
+              style={{
+                background: isPrincess ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)' : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                color: 'white', minWidth: 52,
+              }}>
+              {teacherNameSaving ? '…' : teacherNameSaved ? '✓' : '保存'}
+            </button>
+          </div>
+          {teacherNameSaved && (
+            <p className="px-4 pb-2 text-[11px] font-semibold" style={{ color: '#34C759' }}>
+              保存しました！生徒の画面に表示されます。
+            </p>
+          )}
+        </div>
+
+        {/* ── 生徒ログインURL / QRコード ── */}
+        <div className="rounded-2xl overflow-hidden"
+          style={isPrincess ? {
+            background: 'rgba(255,255,255,0.55)',
+            border: '1px solid rgba(199,125,255,0.3)',
+          } : {
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,107,0,0.25)',
+          }}>
+          <div className="px-4 pt-3 pb-2 border-b"
+            style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(255,107,0,0.15)' }}>
+            <p className="text-[11px] font-black tracking-widest"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.7)' : 'rgba(255,107,0,0.7)' }}>
+              {isPrincess ? '✦ 生徒ログインURL / QR' : '▸ STUDENT LOGIN URL / QR'}
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            <p className="text-[11px]" style={{ color: isPrincess ? 'rgba(100,0,120,0.6)' : 'rgba(255,255,255,0.4)' }}>
+              このURLを生徒に送ると、名前・生年月日が自動入力されます
+            </p>
+            {/* URL text box */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-xl px-3 py-2 text-[11px] truncate"
+                style={isPrincess ? {
+                  background: 'rgba(255,240,255,0.8)',
+                  color: '#3d004d',
+                  border: '1px solid rgba(199,125,255,0.25)',
+                } : {
+                  background: 'rgba(255,107,0,0.06)',
+                  color: 'rgba(255,255,255,0.7)',
+                  border: '1px solid rgba(255,107,0,0.2)',
+                }}>
+                {loginUrl}
+              </div>
+              <button
+                onClick={handleCopyUrl}
+                className="px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-[0.97] flex-shrink-0"
+                style={{
+                  background: urlCopied ? '#34C759' : isPrincess ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)' : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                  color: 'white',
+                }}>
+                {urlCopied ? '✓ コピー済' : '📋 コピー'}
+              </button>
+            </div>
+            {/* QR toggle */}
+            <button
+              onClick={() => setShowQR(v => !v)}
+              className="w-full py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
+              style={isPrincess ? {
+                background: 'rgba(199,125,255,0.12)',
+                color: '#9B4DCA',
+                border: '1px solid rgba(199,125,255,0.3)',
+              } : {
+                background: 'rgba(255,107,0,0.1)',
+                color: '#FF9F0A',
+                border: '1px solid rgba(255,107,0,0.25)',
+              }}>
+              {showQR ? '▲ QRコードを閉じる' : '▼ QRコードを表示'}
+            </button>
+            {showQR && (
+              <div className="flex flex-col items-center py-3 gap-2">
+                <div className="rounded-2xl p-3 bg-white shadow-md">
+                  <QRCodeSVG value={loginUrl} size={180} />
+                </div>
+                <p className="text-[11px]" style={{ color: isPrincess ? 'rgba(100,0,120,0.5)' : 'rgba(255,255,255,0.35)' }}>
+                  生徒のスマホで読み取るとログイン画面が開きます
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* ── Avatar + main stats card ── */}
         <div className="rounded-3xl overflow-hidden relative"

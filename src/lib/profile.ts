@@ -12,6 +12,7 @@ export interface Profile {
   createdAt: number;
   badges?: BadgeRecord[];
   avatar_url?: string;
+  teacher_name?: string; // 担当講師名（先生がSupabaseから設定）
 }
 
 const KEY = 'student_profile_v1';

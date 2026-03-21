@@ -30,6 +30,17 @@ export default function SetupPage() {
     setStep('celebrate');
   };
 
+  // Pre-fill form from URL params (e.g. /setup?nick=花子&bday=2018-04-01&type=princess)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nick = params.get('nick');
+    const bday = params.get('bday');
+    const type = params.get('type') as CharacterType | null;
+    if (nick) setNickname(nick);
+    if (bday) setBirthday(bday);
+    if (type === 'knight' || type === 'princess') setCharType(type);
+  }, []);
+
   useEffect(() => {
     if (step !== 'celebrate') return;
     const t = setTimeout(() => router.replace('/student'), 3800);
