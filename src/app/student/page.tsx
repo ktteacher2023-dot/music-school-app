@@ -16,6 +16,7 @@ import { COMPANIONS } from '@/lib/companionData';
 import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/lib/badges';
 import AvatarUploader from '@/components/AvatarUploader';
 import { uploadStudentAvatar } from '@/lib/avatar';
+import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MonsterState {
@@ -979,6 +980,7 @@ export default function StudentPage() {
         setShowVic(true);
         setTimeout(() => {
           setShowVic(false); setMs(next); saveMS(next);
+          syncStatsToSupabase(newTotalXp, newLevel, next.monstersDefeated, newStreak);
           if (newLevel > oldLevel) setLevelUpVal(newLevel);
         }, 2400);
       }, 350);
@@ -989,11 +991,23 @@ export default function StudentPage() {
         streakRecord: newStreakRecord, lastPracticeDate: today,
       };
       setMs(next); saveMS(next);
+      syncStatsToSupabase(newTotalXp, newLevel, next.monstersDefeated, newStreak);
       if (newLevel > oldLevel) setTimeout(() => setLevelUpVal(newLevel), 400);
     }
 
     setSong(''); setMins(''); setRating(3); setVideoFile(null);
     localStorage.setItem(LAST_ATTACK_KEY, today); setLastAttackDate(today);
+  };
+
+  // Fire-and-forget: sync game stats to Supabase profiles table
+  const syncStatsToSupabase = (xp: number, lv: number, defeated: number, streak: number) => {
+    if (!supabase) return;
+    const p = getProfile();
+    if (!p) return;
+    supabase.from('profiles')
+      .update({ total_xp: xp, level: lv, monsters_defeated: defeated, streak })
+      .match({ nickname: p.nickname, birthday: p.birthday })
+      .then(() => {}, (e: unknown) => console.warn('[supabase] stats sync failed:', e));
   };
 
   const handleAvatarUpload = async (file: File) => {

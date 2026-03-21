@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { getProfile, type CharacterType } from '@/lib/profile';
 import { getTitle, calcLevel } from '@/lib/gameData';
 import { getBadges, getBadgeInfo, type BadgeId } from '@/lib/badges';
+import { supabase } from '@/lib/supabase';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface Player {
@@ -16,19 +17,6 @@ interface Player {
   type?: CharacterType;
   avatarUrl?: string;
 }
-
-// ─── Demo data (other students in the school) ─────────────────────────────────
-const DEMO: Omit<Player, 'isMe'>[] = [
-  { id:'d1', nickname:'ゆうき',  totalXp:5800, level:17, monstersDefeated:11, streak:16, type:'knight'   },
-  { id:'d2', nickname:'はると',  totalXp:4100, level:13, monstersDefeated:8,  streak:9,  type:'knight'   },
-  { id:'d3', nickname:'そうた',  totalXp:3100, level:11, monstersDefeated:6,  streak:6,  type:'knight'   },
-  { id:'d4', nickname:'ひまり',  totalXp:2500, level:9,  monstersDefeated:5,  streak:8,  type:'princess' },
-  { id:'d5', nickname:'りん',    totalXp:1900, level:7,  monstersDefeated:4,  streak:5,  type:'princess' },
-  { id:'d6', nickname:'あおい',  totalXp:1300, level:6,  monstersDefeated:3,  streak:3,  type:'princess' },
-  { id:'d7', nickname:'けんと',  totalXp: 850, level:4,  monstersDefeated:2,  streak:2,  type:'knight'   },
-  { id:'d8', nickname:'ゆな',    totalXp: 450, level:2,  monstersDefeated:1,  streak:2,  type:'princess' },
-  { id:'d9', nickname:'かいと',  totalXp: 180, level:1,  monstersDefeated:0,  streak:1,  type:'knight'   },
-];
 
 const RANK_COLOR = ['', '#FFD700', '#C0C0C0', '#CD7F32'];
 const KNIGHT_BADGE = ['', '👑', '🥈', '🥉'];
@@ -74,7 +62,7 @@ function RankRow({ rank, player, isPrincess, badges }: {
             ? '0 0 8px rgba(199,125,255,0.5)'
             : '0 0 8px rgba(255,107,0,0.5)',
         }}>
-        {isMe && player.avatarUrl ? (
+        {player.avatarUrl ? (
           <img src={player.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
         ) : (
           player.type === 'princess' ? '🌸' : '⚔️'
@@ -154,10 +142,10 @@ function KnightPodium({ top3 }: { top3: Player[] }) {
                     style={{ filter: rank === 1 ? `drop-shadow(0 0 12px ${rc})` : undefined }}>
                     {KNIGHT_BADGE[rank]}
                   </div>
-                  {isMe && p.avatarUrl && (
+                  {p.avatarUrl && (
                     <div className="w-10 h-10 rounded-full overflow-hidden mx-auto"
                       style={{ border: `2px solid ${rc}`, boxShadow: `0 0 10px ${rc}66` }}>
-                      <img src={p.avatarUrl} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                      <img src={p.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                     </div>
                   )}
                 </div>
@@ -252,7 +240,7 @@ function PrincessTop3({ top3 }: { top3: Player[] }) {
                       boxShadow: '0 0 24px rgba(255,215,0,0.6), 0 0 48px rgba(255,215,0,0.2)',
                       border: '2.5px solid #FFD700',
                     }}>
-                    {p.isMe && p.avatarUrl ? (
+                    {p.avatarUrl ? (
                       <img src={p.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                     ) : (
                       <>
@@ -335,6 +323,7 @@ export default function RankingPage() {
   const [players,  setPlayers]  = useState<Player[]>([]);
   const [charType, setCharType] = useState<CharacterType>('knight');
   const [mounted,  setMounted]  = useState(false);
+  const [loading,  setLoading]  = useState(true);
   const [myRank,   setMyRank]   = useState(0);
   const [myBadges, setMyBadges] = useState<BadgeId[]>([]);
 
@@ -342,33 +331,85 @@ export default function RankingPage() {
     const p = getProfile();
     const type = p?.type ?? 'knight';
     setCharType(type);
+    setMyBadges(getBadges().map(b => b.id));
 
+    // Local "me" data (always up-to-date)
     let myXp = 0, myMonsters = 0, myStreak = 0;
     try {
       const ms = JSON.parse(localStorage.getItem('monster_state_v2') ?? 'null');
       if (ms) { myXp = ms.totalXp ?? 0; myMonsters = ms.monstersDefeated ?? 0; myStreak = ms.streak ?? 0; }
     } catch { /* noop */ }
 
-    const me: Player = {
-      id: 'me',
-      nickname: p?.nickname ?? 'あなた',
-      totalXp: myXp,
-      level: calcLevel(myXp),
-      monstersDefeated: myMonsters,
-      streak: myStreak,
-      isMe: true,
-      type,
-      avatarUrl: p?.avatar_url ?? undefined,
-    };
+    const myNickname = p?.nickname ?? '';
+    const myBirthday = p?.birthday ?? '';
 
-    const all = [...DEMO.map(d => ({ ...d, isMe: false })), me]
-      .sort((a, b) => b.totalXp - a.totalXp);
+    async function fetchRankings() {
+      if (supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, nickname, birthday, type, avatar_url, total_xp, monsters_defeated, streak')
+            .order('total_xp', { ascending: false });
 
-    setPlayers(all);
-    setMyRank(all.findIndex(pl => pl.isMe) + 1);
-    setMyBadges(getBadges().map(b => b.id));
-    setMounted(true);
+          if (!error && data && data.length > 0) {
+            const all: Player[] = data.map(row => {
+              const isMe = row.nickname === myNickname && row.birthday === myBirthday;
+              const xp = isMe ? myXp : (row.total_xp ?? 0);
+              return {
+                id: row.id,
+                nickname: row.nickname,
+                totalXp: xp,
+                level: calcLevel(xp),
+                monstersDefeated: isMe ? myMonsters : (row.monsters_defeated ?? 0),
+                streak: isMe ? myStreak : (row.streak ?? 0),
+                isMe,
+                type: (row.type as CharacterType) ?? 'knight',
+                avatarUrl: row.avatar_url ?? undefined,
+              };
+            });
+            // Re-sort so local "me" data (most recent) is correctly placed
+            all.sort((a, b) => b.totalXp - a.totalXp);
+            setPlayers(all);
+            setMyRank(all.findIndex(pl => pl.isMe) + 1);
+            setMounted(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('[ranking] supabase fetch failed:', e);
+        }
+      }
+
+      // Fallback: local data only
+      const me: Player = {
+        id: 'me',
+        nickname: p?.nickname ?? 'あなた',
+        totalXp: myXp,
+        level: calcLevel(myXp),
+        monstersDefeated: myMonsters,
+        streak: myStreak,
+        isMe: true,
+        type,
+        avatarUrl: p?.avatar_url ?? undefined,
+      };
+      setPlayers([me]);
+      setMyRank(1);
+      setMounted(true);
+      setLoading(false);
+    }
+
+    fetchRankings();
   }, []);
+
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4"
+      style={{ background: '#080c18' }}>
+      <div className="animate-spin text-5xl leading-none">⭐</div>
+      <p className="text-sm font-bold" style={{ color: 'rgba(255,160,0,0.7)' }}>
+        ランキングを読み込み中…
+      </p>
+    </div>
+  );
 
   if (!mounted) return null;
 
@@ -464,35 +505,57 @@ export default function RankingPage() {
 
       {/* Content */}
       <div className="relative z-10 mt-4 space-y-4">
-        {/* Top 3 */}
-        {isPrincess
-          ? <PrincessTop3 top3={top3}/>
-          : <KnightPodium top3={top3}/>
-        }
-
-        {/* Section label */}
-        <div className="px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px" style={{ background: isPrincess
-              ? 'linear-gradient(90deg, transparent, rgba(199,125,255,0.3))'
-              : 'linear-gradient(90deg, transparent, rgba(255,107,0,0.3))' }}/>
-            <span className="text-[10px] font-black tracking-[0.2em] uppercase"
-              style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,107,0,0.5)' }}>
-              {isPrincess ? '✦ 魔法使いたち ✦' : '▸ CHALLENGERS ◂'}
+        {players.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 gap-4 px-8 text-center">
+            <span className="text-5xl leading-none" style={{ animation:'twinkle 2s ease-in-out infinite' }}>
+              {isPrincess ? '🔮' : '⚔️'}
             </span>
-            <div className="flex-1 h-px" style={{ background: isPrincess
-              ? 'linear-gradient(90deg, rgba(199,125,255,0.3), transparent)'
-              : 'linear-gradient(90deg, rgba(255,107,0,0.3), transparent)' }}/>
+            <p className="font-black text-lg"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.8)' : 'rgba(255,160,0,0.8)' }}>
+              {isPrincess ? 'まだ魔法使いは現れていないようだ…' : 'まだ冒険者は現れていないようだ…'}
+            </p>
+            <p className="text-sm" style={{ color: isPrincess ? 'rgba(199,125,255,0.4)' : 'rgba(255,255,255,0.3)' }}>
+              {isPrincess ? '練習して名前を刻もう！' : '練習して伝説を作ろう！'}
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Top 3 */}
+            {top3.length > 0 && (isPrincess
+              ? <PrincessTop3 top3={top3}/>
+              : <KnightPodium top3={top3}/>
+            )}
 
-        {/* 4th and beyond */}
-        <div className="px-4 space-y-2">
-          {rest.map((p, i) => (
-            <RankRow key={p.id} rank={i + 4} player={p} isPrincess={isPrincess}
-              badges={p.isMe ? myBadges : undefined}/>
-          ))}
-        </div>
+            {/* Section label (only when there are 4+ players) */}
+            {rest.length > 0 && (
+              <div className="px-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px" style={{ background: isPrincess
+                    ? 'linear-gradient(90deg, transparent, rgba(199,125,255,0.3))'
+                    : 'linear-gradient(90deg, transparent, rgba(255,107,0,0.3))' }}/>
+                  <span className="text-[10px] font-black tracking-[0.2em] uppercase"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,107,0,0.5)' }}>
+                    {isPrincess ? '✦ 魔法使いたち ✦' : '▸ CHALLENGERS ◂'}
+                  </span>
+                  <div className="flex-1 h-px" style={{ background: isPrincess
+                    ? 'linear-gradient(90deg, rgba(199,125,255,0.3), transparent)'
+                    : 'linear-gradient(90deg, rgba(255,107,0,0.3), transparent)' }}/>
+                </div>
+              </div>
+            )}
+
+            {/* 4th and beyond */}
+            {rest.length > 0 && (
+              <div className="px-4 space-y-2">
+                {rest.map((p, i) => (
+                  <RankRow key={p.id} rank={i + 4} player={p} isPrincess={isPrincess}
+                    badges={p.isMe ? myBadges : undefined}/>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
