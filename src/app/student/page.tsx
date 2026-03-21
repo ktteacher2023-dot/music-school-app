@@ -2041,72 +2041,74 @@ export default function StudentPage() {
             <p className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
               {theme.completedNextMsg}
             </p>
-            {/* Music quiz game button / already-played message */}
-            {gamePlayedToday ? (
-              <div className="w-full rounded-2xl py-3 px-4 text-center"
+            {/* Game buttons / already-played messages — unified logic */}
+            {gamePlayedToday && melodyPlayedToday ? (
+              /* ── 両方プレイ済み: 1つのメッセージに統合 ── */
+              <div className="w-full rounded-2xl py-4 px-4 text-center"
                 style={{
                   background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
                   border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
                 }}>
-                <p className="text-sm font-black mb-0.5" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
-                  {isPrincess ? '🌙 今日の魔法の力は使い果たしたわ' : '🦑 今日のナワバリバトルは終了だ！'}
+                <p className="text-sm font-black mb-1" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
+                  {isPrincess
+                    ? '✨ 今日の魔法は使い果たしたわ！'
+                    : '🦑 今日の修行は完了だ！'}
                 </p>
                 <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
                   {isPrincess
-                    ? '明日になればまた魔法が使えるようになるわ！'
+                    ? 'また明日一緒に挑戦しようね ✦'
                     : '明日のためにインクを貯めておけよ！'}
                 </p>
               </div>
             ) : (
-              <button
-                onClick={() => setShowMusicGame(true)}
-                className="w-full rounded-2xl py-3.5 font-black text-base text-white"
-                style={{
-                  background: isPrincess
-                    ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
-                    : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
-                  boxShadow: isPrincess
-                    ? '0 4px 20px rgba(199,125,255,0.5)'
-                    : '0 4px 20px rgba(255,107,0,0.6)',
-                  border: 'none', cursor: 'pointer',
-                  animation: 'floatBounce 3s ease-in-out infinite',
-                }}>
-                {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
-              </button>
-            )}
+              /* ── 未プレイのゲームがある: 個別に表示 ── */
+              <>
+                {gamePlayedToday ? (
+                  <p className="text-xs text-center"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                    {isPrincess ? '🎼 音楽パズル: 今日は挑戦済み ✓' : '🎵 音撃クイズ: 今日は挑戦済み ✓'}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowMusicGame(true)}
+                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                    style={{
+                      background: isPrincess
+                        ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
+                        : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                      boxShadow: isPrincess
+                        ? '0 4px 20px rgba(199,125,255,0.5)'
+                        : '0 4px 20px rgba(255,107,0,0.6)',
+                      border: 'none', cursor: 'pointer',
+                      animation: 'floatBounce 3s ease-in-out infinite',
+                    }}>
+                    {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
+                  </button>
+                )}
 
-            {/* Melody quiz game button / already-played message */}
-            {melodyPlayedToday ? (
-              <div className="w-full rounded-2xl py-3 px-4 text-center"
-                style={{
-                  background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
-                  border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
-                }}>
-                <p className="text-sm font-black mb-0.5" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
-                  {isPrincess ? '🎵 今日のメロディ魔法は使い果たしたわ' : '🎼 今日のメロディ音撃は終了だ！'}
-                </p>
-                <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
-                  {isPrincess
-                    ? '明日になればまたメロディ魔法が使えるわ！'
-                    : '明日また腕試しだ！'}
-                </p>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowMelodyGame(true)}
-                className="w-full rounded-2xl py-3.5 font-black text-base text-white"
-                style={{
-                  background: isPrincess
-                    ? 'linear-gradient(135deg,#9B59B6,#FF6B9D)'
-                    : 'linear-gradient(135deg,#0066FF,#00C6FF)',
-                  boxShadow: isPrincess
-                    ? '0 4px 20px rgba(155,89,182,0.5)'
-                    : '0 4px 20px rgba(0,102,255,0.5)',
-                  border: 'none', cursor: 'pointer',
-                  animation: 'floatBounce 3s ease-in-out infinite',
-                }}>
-                {isPrincess ? '🎵 メロディ魔法パズルに挑戦！' : '🎼 メロディ音撃バトルに挑戦！'}
-              </button>
+                {melodyPlayedToday ? (
+                  <p className="text-xs text-center"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                    {isPrincess ? '🎵 メロディ魔法: 今日は挑戦済み ✓' : '🎼 メロディ音撃: 今日は挑戦済み ✓'}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowMelodyGame(true)}
+                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                    style={{
+                      background: isPrincess
+                        ? 'linear-gradient(135deg,#9B59B6,#FF6B9D)'
+                        : 'linear-gradient(135deg,#0066FF,#00C6FF)',
+                      boxShadow: isPrincess
+                        ? '0 4px 20px rgba(155,89,182,0.5)'
+                        : '0 4px 20px rgba(0,102,255,0.5)',
+                      border: 'none', cursor: 'pointer',
+                      animation: 'floatBounce 3s ease-in-out infinite',
+                    }}>
+                    {isPrincess ? '🎵 メロディ魔法パズルに挑戦！' : '🎼 メロディ音撃バトルに挑戦！'}
+                  </button>
+                )}
+              </>
             )}
 
             {ms.streak >= 3 && (
