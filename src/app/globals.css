@@ -117,3 +117,44 @@ input[type='number']::-webkit-outer-spin-button {
 .particle-6 { animation: pb6 0.9s cubic-bezier(0,0,0.2,1) forwards; }
 .particle-7 { animation: pb7 0.9s cubic-bezier(0,0,0.2,1) forwards; }
 .particle-8 { animation: pb8 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+
+/* ── Ink spread (knight attack) ── */
+@keyframes inkSpread {
+  0%   { transform: scale(0); opacity: 0.65; }
+  100% { transform: scale(9); opacity: 0; }
+}
+
+/* ── Pixie dust burst (princess – 16 directions) ── */
+@keyframes pd1  { to { transform: translate(-120px,-185px) scale(0) rotate( 360deg); opacity:0; } }
+@keyframes pd2  { to { transform: translate( 120px,-185px) scale(0) rotate(-360deg); opacity:0; } }
+@keyframes pd3  { to { transform: translate(-190px,  -55px) scale(0) rotate( 270deg); opacity:0; } }
+@keyframes pd4  { to { transform: translate( 190px,  -55px) scale(0) rotate(-270deg); opacity:0; } }
+@keyframes pd5  { to { transform: translate(  -75px,-225px) scale(0) rotate( 360deg); opacity:0; } }
+@keyframes pd6  { to { transform: translate(   75px,-225px) scale(0) rotate(-360deg); opacity:0; } }
+@keyframes pd7  { to { transform: translate(-160px,  115px) scale(0) rotate( 270deg); opacity:0; } }
+@keyframes pd8  { to { transform: translate( 160px,  115px) scale(0) rotate(-270deg); opacity:0; } }
+@keyframes pd9  { to { transform: translate(   24px,-210px) scale(0) rotate( 360deg); opacity:0; } }
+@keyframes pd10 { to { transform: translate(  -24px,-210px) scale(0) rotate(-360deg); opacity:0; } }
+@keyframes pd11 { to { transform: translate(-110px,  140px) scale(0) rotate( 180deg); opacity:0; } }
+@keyframes pd12 { to { transform: translate( 110px,  140px) scale(0) rotate(-180deg); opacity:0; } }
+@keyframes pd13 { to { transform: translate(-215px,   18px) scale(0) rotate( 360deg); opacity:0; } }
+@keyframes pd14 { to { transform: translate( 215px,   18px) scale(0) rotate(-360deg); opacity:0; } }
+@keyframes pd15 { to { transform: translate(  -58px,  180px) scale(0) rotate( 270deg); opacity:0; } }
+@keyframes pd16 { to { transform: translate(   58px,  180px) scale(0) rotate(-270deg); opacity:0; } }
+
+.pixie-1  { animation: pd1  1.2s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-2  { animation: pd2  1.2s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-3  { animation: pd3  1.1s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-4  { animation: pd4  1.1s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-5  { animation: pd5  1.3s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-6  { animation: pd6  1.3s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-7  { animation: pd7  1.0s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-8  { animation: pd8  1.0s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-9  { animation: pd9  1.4s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-10 { animation: pd10 1.4s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-11 { animation: pd11 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-12 { animation: pd12 0.9s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-13 { animation: pd13 1.1s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-14 { animation: pd14 1.1s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-15 { animation: pd15 1.2s cubic-bezier(0,0,0.2,1) forwards; }
+.pixie-16 { animation: pd16 1.2s cubic-bezier(0,0,0.2,1) forwards; }
