@@ -17,8 +17,10 @@ export async function uploadLessonVideo(
 ): Promise<{ url: string | null; error: string | null }> {
   if (!supabase) return { url: null, error: 'Supabase未接続（環境変数を確認）' };
 
-  const ext  = file.name.split('.').pop() ?? 'mp4';
-  const path = `${nickname}/${Date.now()}.${ext}`;
+  const ext  = file.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'mp4';
+  const ts   = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `lessons/${ts}_${rand}.${ext}`;
 
   const { error: upErr } = await supabase.storage
     .from('lesson-records')            // ← bucket name: lesson-records
