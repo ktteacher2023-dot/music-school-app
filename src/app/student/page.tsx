@@ -36,8 +36,9 @@ const INIT: MonsterState = {
   monsterIndex: 0, defeatedIds: [], streak: 0, streakRecord: 0, lastPracticeDate: '',
 };
 const MS_KEY          = 'monster_state_v2'; // v2: new fields
-const LAST_ATTACK_KEY = 'last_attack_date';
-const ROLE_KEY        = 'app_role';
+const LAST_ATTACK_KEY  = 'last_attack_date';
+const MUSIC_GAME_KEY   = 'music_quiz_last_played';
+const ROLE_KEY         = 'app_role';
 
 function loadMS(): MonsterState {
   if (typeof window === 'undefined') return INIT;
@@ -1298,7 +1299,8 @@ export default function StudentPage() {
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
 
   // music quiz game
-  const [showMusicGame, setShowMusicGame] = useState(false);
+  const [showMusicGame,    setShowMusicGame]    = useState(false);
+  const [gamePlayedToday,  setGamePlayedToday]  = useState(false);
 
   // daily limit
   const [lastAttackDate, setLastAttackDate] = useState('');
@@ -1323,6 +1325,7 @@ export default function StudentPage() {
     setAvatarUrl(p.avatar_url ?? null);
     setMounted(true); load(); setMs(loadMS());
     setLastAttackDate(localStorage.getItem(LAST_ATTACK_KEY) ?? '');
+    setGamePlayedToday(localStorage.getItem(MUSIC_GAME_KEY) === todayStr());
     // Load current badges; if expression badge was just awarded by teacher, celebrate
     const currentBadges = getBadges().map(b => b.id);
     setMyBadges(currentBadges);
@@ -1472,6 +1475,18 @@ export default function StudentPage() {
   // Music quiz game: award EXP and close
   const handleGameEnd = (expGained: number) => {
     setShowMusicGame(false);
+    // Mark today as played (localStorage + Supabase)
+    localStorage.setItem(MUSIC_GAME_KEY, today);
+    setGamePlayedToday(true);
+    if (supabase) {
+      const p = getProfile();
+      if (p) {
+        supabase.from('profiles')
+          .update({ last_game_at: today })
+          .match({ nickname: p.nickname, birthday: p.birthday })
+          .then(() => {}, () => {});
+      }
+    }
     if (expGained <= 0) return;
     const newTotalXp = ms.totalXp + expGained;
     const newLevel   = calcLevel(newTotalXp);
@@ -1985,22 +2000,39 @@ export default function StudentPage() {
             <p className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
               {theme.completedNextMsg}
             </p>
-            {/* Music quiz game button */}
-            <button
-              onClick={() => setShowMusicGame(true)}
-              className="w-full rounded-2xl py-3.5 font-black text-base text-white"
-              style={{
-                background: isPrincess
-                  ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
-                  : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
-                boxShadow: isPrincess
-                  ? '0 4px 20px rgba(199,125,255,0.5)'
-                  : '0 4px 20px rgba(255,107,0,0.6)',
-                border: 'none', cursor: 'pointer',
-                animation: 'floatBounce 3s ease-in-out infinite',
-              }}>
-              {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
-            </button>
+            {/* Music quiz game button / already-played message */}
+            {gamePlayedToday ? (
+              <div className="w-full rounded-2xl py-3 px-4 text-center"
+                style={{
+                  background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
+                  border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
+                }}>
+                <p className="text-sm font-black mb-0.5" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
+                  {isPrincess ? '🌙 今日の魔法の力は使い果たしたわ' : '🦑 今日のナワバリバトルは終了だ！'}
+                </p>
+                <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
+                  {isPrincess
+                    ? '明日になればまた魔法が使えるようになるわ！'
+                    : '明日のためにインクを貯めておけよ！'}
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowMusicGame(true)}
+                className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                style={{
+                  background: isPrincess
+                    ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
+                    : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                  boxShadow: isPrincess
+                    ? '0 4px 20px rgba(199,125,255,0.5)'
+                    : '0 4px 20px rgba(255,107,0,0.6)',
+                  border: 'none', cursor: 'pointer',
+                  animation: 'floatBounce 3s ease-in-out infinite',
+                }}>
+                {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
+              </button>
+            )}
 
             {ms.streak >= 3 && (
               <div className="mt-1 px-5 py-2 rounded-2xl"
