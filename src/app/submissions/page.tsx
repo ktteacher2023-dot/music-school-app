@@ -25,7 +25,7 @@ export default function SubmissionsPage() {
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
       <header className="bg-white/85 backdrop-blur-xl sticky z-10 border-b border-[#C6C6C8]/60"
-        style={{ top: 'env(safe-area-inset-top)' }}>
+        style={{ top: 'max(20px, env(safe-area-inset-top))' }}>
         <div className="px-4 py-3">
           <h1 className="text-2xl font-bold text-[#1C1C1E]">提出履歴</h1>
           <p className="text-xs text-[#6C6C70]">練習記録と先生からのフィードバック</p>

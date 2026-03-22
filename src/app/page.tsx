@@ -164,7 +164,7 @@ export default function RoleSelectPage() {
           style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(24px)' }}
         >
           {/* Top safe area spacer */}
-          <div style={{ height: 'env(safe-area-inset-top)' }} />
+          <div style={{ height: 'max(20px, env(safe-area-inset-top))' }} />
 
           {/* Cancel */}
           <div className="flex justify-start px-5 pt-3">

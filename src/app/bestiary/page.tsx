@@ -436,7 +436,7 @@ export default function BestiaryPage() {
       {/* Header */}
       <header className="sticky z-20"
         style={{
-          top: 'env(safe-area-inset-top)',
+          top: 'max(20px, env(safe-area-inset-top))',
           background: isPrincess ? 'rgba(255,240,255,0.92)' : 'rgba(8,12,28,0.95)',
           backdropFilter: 'blur(24px)',
           borderBottom: isPrincess ? '1px solid rgba(255,100,180,0.25)' : '1px solid rgba(255,180,0,0.18)',

@@ -38,14 +38,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" className={mplus.variable}>
-      <body>
+      <body style={{ paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
         <SwRegister />
         <main
           className="min-h-screen"
-          style={{
-            paddingTop: 'env(safe-area-inset-top)',
-            paddingBottom: 'calc(49px + env(safe-area-inset-bottom))',
-          }}
+          style={{ paddingBottom: 'calc(49px + env(safe-area-inset-bottom))' }}
         >
           {children}
         </main>

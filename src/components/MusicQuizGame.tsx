@@ -333,7 +333,7 @@ export default function MusicQuizGame({ isPrincess, onGameEnd }: Props) {
 
         {/* Header */}
         <div style={{
-          paddingTop: 'calc(env(safe-area-inset-top) + 16px)',
+          paddingTop: 'calc(max(20px, env(safe-area-inset-top)) + 16px)',
           paddingRight: '20px',
           paddingBottom: '12px',
           paddingLeft: '20px',

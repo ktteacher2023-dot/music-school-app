@@ -83,7 +83,7 @@ export default function CalendarPage() {
       {/* Header */}
       <header
         className="bg-white/80 backdrop-blur-xl sticky z-10 border-b border-[#C6C6C8]/60"
-        style={{ top: 'env(safe-area-inset-top)' }}
+        style={{ top: 'max(20px, env(safe-area-inset-top))' }}
       >
         <div className="px-4 py-3">
           <h1 className="text-2xl font-bold text-[#1C1C1E]">カレンダー</h1>

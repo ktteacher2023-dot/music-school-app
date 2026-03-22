@@ -265,7 +265,7 @@ export default function MelodyQuizGame({ isPrincess, onGameEnd }: Props) {
 
         {/* Header */}
         <div style={{
-          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+          paddingTop: 'calc(max(20px, env(safe-area-inset-top)) + 14px)',
           paddingRight: '20px',
           paddingBottom: '12px',
           paddingLeft: '20px',

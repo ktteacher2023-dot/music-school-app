@@ -225,7 +225,7 @@ export default function TeacherPage() {
 
       {/* ── Header ── */}
       <header className="bg-white/85 backdrop-blur-xl sticky z-10 border-b border-[#C6C6C8]/60"
-        style={{ top: 'env(safe-area-inset-top)' }}>
+        style={{ top: 'max(20px, env(safe-area-inset-top))' }}>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             {mounted && (
@@ -732,7 +732,7 @@ function StudentDetailModal({ profile, stats, onClose }: {
 
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
-        style={{ paddingTop:'env(safe-area-inset-top)', background:hdrBg, backdropFilter:'blur(24px)', borderBottom:hdrBdr }}>
+        style={{ paddingTop:'max(20px, env(safe-area-inset-top))', background:hdrBg, backdropFilter:'blur(24px)', borderBottom:hdrBdr }}>
         <button onClick={onClose}
           className="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
           style={{ background: isPrincess ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)' }}>
