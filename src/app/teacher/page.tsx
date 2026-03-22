@@ -6,7 +6,7 @@ import { Submission } from '@/types';
 import { getSubmissions, updateSubmission } from '@/lib/submissions';
 import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
-import { awardBadge, hasBadge } from '@/lib/badges';
+import { getOrCreateTeacherId } from '@/lib/teacherIdentity';
 import { supabase } from '@/lib/supabase';
 import AvatarUploader from '@/components/AvatarUploader';
 import { uploadTeacherAvatar, getTeacherAvatarUrl } from '@/lib/avatar';
@@ -32,9 +32,6 @@ const STAMPS = [
 function todayStr() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
 }
-
-const MUSIC_GAME_KEY  = 'music_quiz_last_played';
-const MELODY_GAME_KEY = 'melody_quiz_last_played';
 
 function daysSince(dateStr: string): number {
   if (!dateStr) return 999;
@@ -83,22 +80,37 @@ export default function TeacherPage() {
   const [stats,        setStats]        = useState<MonsterState | null>(null);
   const [profile,      setProfile]      = useState<Profile | null>(null);
   const [stampToast,   setStampToast]   = useState('');
-  const [xpGranted,       setXpGranted]       = useState(false);
-  const [expressionGranted, setExpressionGranted] = useState(false);
-  const [expressionAlready, setExpressionAlready] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [gameResetDone,     setGameResetDone]     = useState(false);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
   const [showSettings,      setShowSettings]      = useState(false);
   const [showStudentDetail, setShowStudentDetail] = useState(false);
+  const [teacherId,         setTeacherId]         = useState('');
+  const [students,          setStudents]          = useState<Profile[]>([]);
+  const [selectedStudent,   setSelectedStudent]   = useState<Profile | null>(null);
+  const [loadingStudents,   setLoadingStudents]   = useState(true);
+  const [inviteUrlCopied,   setInviteUrlCopied]   = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setSubs(getSubmissions());
     setStats(loadMS());
     setProfile(getProfile());
-    setExpressionAlready(hasBadge('expression'));
     setTeacherAvatarUrl(getTeacherAvatarUrl());
+
+    const tid = getOrCreateTeacherId();
+    setTeacherId(tid);
+    if (supabase) {
+      supabase.from('profiles')
+        .select('*')
+        .eq('teacher_id', tid)
+        .order('created_at', { ascending: false })
+        .then(
+          ({ data }) => { setStudents((data as Profile[]) ?? []); setLoadingStudents(false); },
+          () => setLoadingStudents(false),
+        );
+    } else {
+      setLoadingStudents(false);
+    }
   }, []);
 
   const reload = () => setSubs(getSubmissions());
@@ -107,7 +119,6 @@ export default function TeacherPage() {
   const todaySubs          = subs.filter(s => s.date === today);
   const totalMinutes       = todaySubs.reduce((sum, s) => sum + s.duration, 0);
   const uncommented        = subs.filter(s => !s.teacherComment).length;
-  const latestVideoSub     = [...subs].reverse().find(s => s.videoUrl);
   const latestUnresponded  = subs
     .filter(s => !s.teacherComment)
     .sort((a, b) => b.submittedAt - a.submittedAt)[0];
@@ -143,67 +154,28 @@ export default function TeacherPage() {
     setTimeout(() => setStampToast(''), 2500);
   };
 
-  const handleExpressionAward = () => {
-    const awarded = awardBadge('expression');
-    if (awarded) {
-      setExpressionGranted(true);
-      setExpressionAlready(true);
-      setTimeout(() => setExpressionGranted(false), 3000);
-    } else {
-      setExpressionAlready(true);
-    }
-  };
-
   const handleDeleteStudent = async () => {
-    const STUDENT_KEYS = [
-      'student_profile_v1', 'monster_state_v2', 'last_attack_date',
-      'badge_celebrated', 'music_practice_records', 'practice_submissions_v1',
-    ];
-    STUDENT_KEYS.forEach(k => localStorage.removeItem(k));
-    if (supabase && profile) {
-      try {
-        await supabase.from('profiles').delete()
-          .match({ nickname: profile.nickname, birthday: profile.birthday });
-      } catch (e) {
-        console.warn('[supabase] delete failed:', e);
-      }
+    const target = selectedStudent ?? profile;
+    if (!target) { setShowDeleteConfirm(false); return; }
+    // If deleting the local student, clear localStorage
+    if (profile && target.nickname === profile.nickname && target.birthday === profile.birthday) {
+      const STUDENT_KEYS = [
+        'student_profile_v1', 'monster_state_v2', 'last_attack_date',
+        'badge_celebrated', 'music_practice_records', 'practice_submissions_v1',
+      ];
+      STUDENT_KEYS.forEach(k => localStorage.removeItem(k));
+      setProfile(null);
+      setStats(null);
+      setSubs([]);
     }
-    setProfile(null);
-    setStats(null);
-    setSubs([]);
+    if (supabase) {
+      await supabase.from('profiles').delete()
+        .match({ nickname: target.nickname, birthday: target.birthday });
+    }
+    setStudents(prev => prev.filter(s => !(s.nickname === target.nickname && s.birthday === target.birthday)));
+    setSelectedStudent(null);
+    setShowStudentDetail(false);
     setShowDeleteConfirm(false);
-  };
-
-  const handleBonusXp = () => {
-    const raw = localStorage.getItem(MS_KEY);
-    if (!raw) return;
-    const s: MonsterState = JSON.parse(raw);
-    s.totalXp += 50;
-    s.level    = calcLevel(s.totalXp);
-    localStorage.setItem(MS_KEY, JSON.stringify(s));
-    setStats({ ...s });
-    setXpGranted(true);
-    setTimeout(() => setXpGranted(false), 2500);
-  };
-
-  const handleResetGameState = () => {
-    const nick = profile?.nickname ?? '';
-    // Clear legacy unscoped key, empty-suffix fallback, and current student-scoped keys
-    localStorage.removeItem(MUSIC_GAME_KEY);
-    localStorage.removeItem(MELODY_GAME_KEY);
-    localStorage.removeItem(`${MUSIC_GAME_KEY}_`);
-    localStorage.removeItem(`${MELODY_GAME_KEY}_`);
-    localStorage.removeItem(`${MUSIC_GAME_KEY}_${nick}`);
-    localStorage.removeItem(`${MELODY_GAME_KEY}_${nick}`);
-    // Also reset last_game_at in Supabase so cross-device sync is clean
-    if (supabase && profile) {
-      supabase.from('profiles')
-        .update({ last_game_at: null })
-        .match({ nickname: profile.nickname, birthday: profile.birthday })
-        .then(() => {}, () => {});
-    }
-    setGameResetDone(true);
-    setTimeout(() => setGameResetDone(false), 3000);
   };
 
   return (
@@ -215,11 +187,13 @@ export default function TeacherPage() {
       )}
 
       {/* ── Student detail modal ── */}
-      {showStudentDetail && profile && (
+      {showStudentDetail && selectedStudent && (
         <StudentDetailModal
-          profile={profile}
-          stats={stats}
-          onClose={() => setShowStudentDetail(false)}
+          profile={selectedStudent}
+          stats={selectedStudent.nickname === profile?.nickname ? stats : null}
+          teacherId={teacherId}
+          onClose={() => { setShowStudentDetail(false); setSelectedStudent(null); }}
+          onDelete={() => setShowDeleteConfirm(true)}
         />
       )}
 
@@ -281,200 +255,118 @@ export default function TeacherPage() {
           </section>
         )}
 
-        {/* ── 2. STUDENT TILE ── */}
+        {/* ── 2. STUDENT LIST ── */}
         {mounted && (
           <section>
-            <SectionLabel>生徒のステータス</SectionLabel>
-            {!profile ? (
+            <SectionLabel>生徒一覧</SectionLabel>
+
+            {/* Invite URL */}
+            {teacherId && (
+              <div className="bg-white rounded-2xl shadow-sm px-4 py-3 mb-3 space-y-2">
+                <p className="text-[11px] font-black tracking-widest text-[#8E8E93] uppercase">生徒を招待する</p>
+                <p className="text-xs text-[#6C6C70]">このURLを生徒に共有すると、先生との紐付けが自動で行われます</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-[#F2F2F7] rounded-xl px-3 py-2 text-[11px] text-[#6C6C70] truncate">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/setup?tid=${teacherId}` : ''}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (typeof window === 'undefined') return;
+                      navigator.clipboard.writeText(`${window.location.origin}/setup?tid=${teacherId}`).then(() => {
+                        setInviteUrlCopied(true);
+                        setTimeout(() => setInviteUrlCopied(false), 2500);
+                      });
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-white active:scale-[0.97] transition-all"
+                    style={{ background: inviteUrlCopied ? '#34C759' : 'linear-gradient(135deg,#007AFF,#5856D6)', minWidth: 52 }}>
+                    {inviteUrlCopied ? '✓' : 'コピー'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingStudents ? (
+              <div className="bg-white rounded-2xl shadow-sm flex items-center justify-center py-10">
+                <div className="w-6 h-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : students.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm flex flex-col items-center justify-center py-10 gap-2">
                 <span className="text-3xl">👤</span>
                 <p className="text-sm font-semibold text-[#1C1C1E]">生徒が登録されていません</p>
-                <p className="text-xs text-[#8E8E93]">生徒がアプリでプロフィールを作成すると表示されます</p>
+                <p className="text-xs text-[#8E8E93] text-center px-6">上の招待URLを生徒に共有してください</p>
               </div>
             ) : (
-            <div className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all
-              ${isWarning ? 'ring-2 ring-[#FF3B30]/50' : ''}`}>
-
-              {/* Detail page tap area */}
-              <button className="w-full text-left active:bg-[#F2F2F7] transition-colors"
-                onClick={() => setShowStudentDetail(true)}>
-                <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
-                  <span className="text-[11px] font-black tracking-widest uppercase text-[#8E8E93]">
-                    生徒プロフィール
-                  </span>
-                  <div className="flex items-center gap-1 text-[#007AFF]">
-                    <span className="text-[11px] font-semibold">詳細を見る</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round">
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                  </div>
-                </div>
-              </button>
-
-              {/* Warning banner */}
-              {isWarning && (
-                <div className="bg-[#FF3B30]/10 px-4 py-2.5 flex items-center gap-2.5 border-b border-[#FF3B30]/10">
-                  <span className="w-6 h-6 rounded-full bg-[#FF3B30] flex items-center justify-center shrink-0">
-                    <span className="text-white text-xs font-black">！</span>
-                  </span>
-                  <span className="text-[#FF3B30] text-xs font-semibold">
-                    {daysSincePractice >= 999
-                      ? 'まだ練習を始めていません'
-                      : `${daysSincePractice}日間練習がありません — 声をかけてみよう`}
-                  </span>
-                </div>
-              )}
-
-              {/* Student info row */}
-              <div className="px-4 py-3 flex items-center gap-3">
-                <div className="shrink-0 w-14 h-14 rounded-2xl overflow-hidden shadow-sm relative"
-                  style={{ background: `linear-gradient(135deg,${cur.from},${cur.to})` }}>
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="avatar"
-                      className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">
-                      {cur.emoji}
+              <div className="space-y-2">
+                {students.map((stu) => {
+                  const stuCur = MONSTERS[0];
+                  const isLocal = profile?.nickname === stu.nickname && profile?.birthday === stu.birthday;
+                  const stuSubs = isLocal ? todaySubs : [];
+                  const stuStats = isLocal ? stats : null;
+                  const stuLv = calcLevel(stuStats?.totalXp ?? 0);
+                  const stuTitle = getTitle(stuLv);
+                  const stuDaysSince = isLocal ? daysSincePractice : 999;
+                  const stuWarning = isLocal && isWarning;
+                  return (
+                    <div key={`${stu.nickname}-${stu.birthday}`}
+                      className={`bg-white rounded-2xl shadow-sm overflow-hidden ${stuWarning ? 'ring-2 ring-[#FF3B30]/50' : ''}`}>
+                      <button className="w-full text-left active:bg-[#F2F2F7] transition-colors"
+                        onClick={() => { setSelectedStudent(stu); setShowStudentDetail(true); }}>
+                        {stuWarning && (
+                          <div className="bg-[#FF3B30]/10 px-4 py-1.5 flex items-center gap-2 border-b border-[#FF3B30]/10">
+                            <span className="text-[#FF3B30] text-[11px] font-semibold">
+                              {stuDaysSince >= 999 ? 'まだ練習を始めていません' : `${stuDaysSince}日間練習なし`}
+                            </span>
+                          </div>
+                        )}
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden shadow-sm"
+                            style={{ background: `linear-gradient(135deg,${stuCur.from},${stuCur.to})` }}>
+                            {stu.avatar_url ? (
+                              <img src={stu.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xl">
+                                {stu.type === 'princess' ? '👸' : '🧑'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-base font-black text-[#1C1C1E]">{stu.nickname}</span>
+                              {isLocal && (stuSubs.length > 0 ? (
+                                <span className="text-[10px] bg-[#34C759]/10 text-[#34C759] font-bold px-1.5 py-0.5 rounded-full">今日練習済み</span>
+                              ) : (
+                                <span className="text-[10px] bg-[#FF9F0A]/10 text-[#FF9F0A] font-bold px-1.5 py-0.5 rounded-full">今日未練習</span>
+                              ))}
+                            </div>
+                            {isLocal ? (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-xs font-bold text-[#6C6C70]">Lv.{stuLv}</span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: stuTitle.color }}>
+                                  {stuTitle.icon} {stuTitle.title}
+                                </span>
+                                <span className="text-[10px] text-[#6C6C70]">🔥{stuStats?.streak ?? 0}日</span>
+                              </div>
+                            ) : (
+                              <p className="text-[11px] text-[#8E8E93] mt-0.5">{stu.birthday}</p>
+                            )}
+                          </div>
+                          <svg width="9" height="14" viewBox="0 0 9 15" fill="none" stroke="#C7C7CC" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M1.5 1.5l6 6-6 6"/>
+                          </svg>
+                        </div>
+                      </button>
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[17px] font-black text-[#1C1C1E]">
-                      {profile?.nickname ?? '未登録'}
-                    </span>
-                    {todaySubs.length > 0 ? (
-                      <span className="text-[11px] bg-[#34C759]/10 text-[#34C759] font-bold px-2 py-0.5 rounded-full">
-                        ✅ 今日練習済み
-                      </span>
-                    ) : (
-                      <span className="text-[11px] bg-[#FF9F0A]/10 text-[#FF9F0A] font-bold px-2 py-0.5 rounded-full">
-                        今日未練習
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-sm font-bold text-[#1C1C1E]">Lv. {lv}</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ backgroundColor: title.color }}>
-                      {title.icon} {title.title}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 mt-1 text-[11px] text-[#6C6C70]">
-                    <span>🔥 <b className="text-[#1C1C1E]">{stats?.streak ?? 0}</b>日連続</span>
-                    <span>⚔️ <b className="text-[#1C1C1E]">{stats?.monstersDefeated ?? 0}</b>体</span>
-                    <span>📖 <b className="text-[#1C1C1E]">{stats?.defeatedIds.length ?? 0}</b>/{MONSTERS.length}</span>
-                    <span>🪙 <b className="text-[#1C1C1E]">{stats?.coins ?? 0}</b></span>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-
-              {/* Latest video thumbnail */}
-              {latestVideoSub?.videoUrl && (
-                <div className="px-4 pb-3">
-                  <p className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest mb-1.5">
-                    最新の練習動画
-                  </p>
-                  <div className="relative rounded-xl overflow-hidden bg-black">
-                    <video
-                      src={latestVideoSub.videoUrl}
-                      playsInline preload="metadata"
-                      className="w-full max-h-44 object-contain cursor-pointer"
-                      onClick={(e) => {
-                        const v = e.currentTarget;
-                        v.paused ? v.play() : v.pause();
-                      }}
-                    />
-                    {/* Play overlay hint */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                          <polygon points="5 3 19 12 5 21 5 3"/>
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-[#8E8E93] mt-1">
-                    {latestVideoSub.songName} · {dateJP(latestVideoSub.date)}
-                  </p>
-                </div>
-              )}
-
-              {/* Bonus XP + Award buttons + Delete */}
-              <div className="px-4 pb-3 space-y-2">
-                <button onClick={handleBonusXp}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#5856D6] to-[#007AFF] text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
-                  🎁 ボーナス経験値 +50XP を付与する
-                </button>
-                {xpGranted && (
-                  <div className="flex items-center gap-2 bg-[#34C759]/10 rounded-xl px-3 py-2 animate-pop-in">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2.5" strokeLinecap="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span className="text-xs text-[#34C759] font-semibold">ボーナス +50 XP を付与しました！</span>
-                  </div>
-                )}
-
-                {/* Game state reset (for testing / timezone recovery) */}
-                <button onClick={handleResetGameState}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FF9F0A] to-[#FF6B00] text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
-                  🔄 今日のゲーム制限をリセット
-                </button>
-                {gameResetDone && (
-                  <div className="flex items-center gap-2 bg-[#FF9F0A]/10 rounded-xl px-3 py-2 animate-pop-in">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" strokeWidth="2.5" strokeLinecap="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span className="text-xs text-[#FF9F0A] font-semibold">ゲーム制限をリセットしました！</span>
-                  </div>
-                )}
-
-                {/* Expression award */}
-                <button onClick={handleExpressionAward} disabled={expressionAlready}
-                  className="w-full py-2.5 rounded-xl text-sm font-bold active:scale-[0.98] transition-all shadow-sm disabled:opacity-50"
-                  style={expressionAlready ? {
-                    background: 'linear-gradient(90deg,#A0A0A0,#C0C0C0)',
-                    color: 'white',
-                  } : {
-                    background: 'linear-gradient(90deg,#FF9F0A,#FF6B00)',
-                    color: 'white',
-                    boxShadow: '0 2px 12px rgba(255,107,0,0.4)',
-                  }}>
-                  {expressionAlready
-                    ? '🏆 表現力賞 授与済み'
-                    : profile?.type === 'princess'
-                      ? '👠 輝くガラスの靴（表現力賞）を贈る'
-                      : '🏆 黄金のインク瓶（表現力賞）を贈る'}
-                </button>
-                {expressionGranted && (
-                  <div className="flex items-center gap-2 bg-[#FF9F0A]/10 rounded-xl px-3 py-2 animate-pop-in">
-                    <span className="text-lg leading-none">
-                      {profile?.type === 'princess' ? '👠' : '🏆'}
-                    </span>
-                    <span className="text-xs text-[#FF9F0A] font-bold">
-                      表現力賞を贈りました！生徒のマイページに反映されます。
-                    </span>
-                  </div>
-                )}
-
-                {/* Delete student */}
-                <button onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full py-2.5 rounded-xl border border-[#FF3B30]/40 text-[#FF3B30] text-sm font-bold active:bg-[#FF3B30]/10 transition-all flex items-center justify-center gap-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                  </svg>
-                  生徒のデータを削除する
-                </button>
-              </div>
-            </div>
             )}
           </section>
         )}
 
         {/* Delete confirm dialog */}
-        {showDeleteConfirm && profile && (
+        {showDeleteConfirm && (selectedStudent ?? profile) && (
           <ConfirmDeleteDialog
-            nickname={profile.nickname}
+            nickname={(selectedStudent ?? profile)!.nickname}
             onConfirm={handleDeleteStudent}
             onCancel={() => setShowDeleteConfirm(false)}
           />
@@ -555,8 +447,9 @@ export default function TeacherPage() {
 }
 
 // ─── Student detail modal ──────────────────────────────────────────────────────
-function StudentDetailModal({ profile, stats, onClose }: {
-  profile: Profile; stats: MonsterState | null; onClose: () => void;
+function StudentDetailModal({ profile, stats, teacherId, onClose, onDelete }: {
+  profile: Profile; stats: MonsterState | null; teacherId: string;
+  onClose: () => void; onDelete: () => void;
 }) {
   const isPrincess  = profile.type === 'princess';
   const lv          = calcLevel(stats?.totalXp ?? 0);
@@ -570,7 +463,7 @@ function StudentDetailModal({ profile, stats, onClose }: {
   const [showQR,    setShowQR]    = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const loginUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/setup?nick=${encodeURIComponent(profile.nickname)}&bday=${profile.birthday}&type=${profile.type}`
+    ? `${window.location.origin}/setup?nick=${encodeURIComponent(profile.nickname)}&bday=${profile.birthday}&type=${profile.type}${teacherId ? `&tid=${teacherId}` : ''}`
     : '';
   const handleCopyUrl = useCallback(() => {
     navigator.clipboard.writeText(loginUrl).then(() => {
@@ -1291,6 +1184,20 @@ function StudentDetailModal({ profile, stats, onClose }: {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Delete student ── */}
+        <div className="mt-2">
+          <button
+            onClick={onDelete}
+            className="w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:opacity-70 transition-opacity"
+            style={{ background: 'rgba(255,59,48,0.12)', color: '#FF3B30' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            この生徒のデータを削除する
+          </button>
         </div>
 
       </div>

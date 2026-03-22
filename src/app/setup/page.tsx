@@ -11,7 +11,8 @@ export default function SetupPage() {
   const [charType,  setCharType] = useState<CharacterType | null>(null);
   const [error,     setError]    = useState('');
   const [savedName, setSavedName] = useState('');
-  const [savedType, setSavedType] = useState<CharacterType>('knight');
+  const [savedType,  setSavedType]  = useState<CharacterType>('knight');
+  const [teacherId,  setTeacherId]  = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -21,7 +22,12 @@ export default function SetupPage() {
     if (!birthday)        { setError('生年月日を入力してください'); return; }
     setError('');
 
-    const p = { nickname: nickname.trim(), birthday, type: charType };
+    const p = {
+      nickname:   nickname.trim(),
+      birthday,
+      type:       charType,
+      teacher_id: teacherId || undefined,
+    };
     saveProfile(p);
     saveProfileToSupabase(p); // 非同期・失敗しても続行
 
@@ -30,15 +36,18 @@ export default function SetupPage() {
     setStep('celebrate');
   };
 
-  // Pre-fill form from URL params (e.g. /setup?nick=花子&bday=2018-04-01&type=princess)
+  // Pre-fill form from URL params
+  // e.g. /setup?nick=花子&bday=2018-04-01&type=princess&tid=<teacher_uuid>
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const nick = params.get('nick');
     const bday = params.get('bday');
     const type = params.get('type') as CharacterType | null;
+    const tid  = params.get('tid');
     if (nick) setNickname(nick);
     if (bday) setBirthday(bday);
     if (type === 'knight' || type === 'princess') setCharType(type);
+    if (tid)  setTeacherId(tid);
   }, []);
 
   useEffect(() => {

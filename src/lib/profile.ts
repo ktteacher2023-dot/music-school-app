@@ -13,6 +13,7 @@ export interface Profile {
   badges?: BadgeRecord[];
   avatar_url?: string;
   teacher_name?: string; // 担当講師名（先生がSupabaseから設定）
+  teacher_id?: string;   // 担当先生のUUID（招待URLから自動設定）
 }
 
 const KEY = 'student_profile_v1';
@@ -60,9 +61,10 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
   if (!supabase) return;
   try {
     await supabase.from('profiles').insert({
-      nickname: p.nickname,
-      birthday: p.birthday,
-      type:     p.type,
+      nickname:   p.nickname,
+      birthday:   p.birthday,
+      type:       p.type,
+      teacher_id: p.teacher_id ?? null,
     });
   } catch (e) {
     console.warn('[supabase] profile save failed:', e);
