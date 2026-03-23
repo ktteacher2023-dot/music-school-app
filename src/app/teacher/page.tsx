@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
 import { Submission } from '@/types';
-import { getSubmissions, updateSubmission } from '@/lib/submissions';
+import { getSubmissions, updateSubmission, getSubmissionsForTeacher, saveTeacherCommentToSupabase } from '@/lib/submissions';
 import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
 import { getOrCreateTeacherId } from '@/lib/teacherIdentity';
@@ -98,6 +98,7 @@ export default function TeacherPage() {
   const [loadingAll,        setLoadingAll]        = useState(false);
   const [showAllProfiles,   setShowAllProfiles]   = useState(false);
   const [sqlNeeded,         setSqlNeeded]         = useState(false);
+  const [newSubsCount,      setNewSubsCount]      = useState(0); // Realtime通知カウント
 
   useEffect(() => {
     setMounted(true);
@@ -109,6 +110,40 @@ export default function TeacherPage() {
     const tid = getOrCreateTeacherId();
     setTeacherId(tid);
     loadStudents(tid);
+
+    // Supabase から提出一覧を取得（クロスデバイス対応）
+    getSubmissionsForTeacher(tid).then(remote => {
+      if (remote.length > 0) setSubs(remote);
+    });
+
+    // Supabase Realtime: 新しい提出をリアルタイムで受信
+    if (!supabase) return;
+    const channel = supabase
+      .channel('submissions-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'submissions' },
+        (payload) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const row = payload.new as any;
+          const newSub = {
+            id:              row.id,
+            studentNickname: row.student_nickname,
+            date:            row.date,
+            songName:        row.song_name,
+            duration:        row.duration,
+            rating:          row.rating,
+            videoUrl:        row.video_url       ?? undefined,
+            videoFileName:   row.video_file_name  ?? undefined,
+            teacherComment:  row.teacher_comment  ?? undefined,
+            submittedAt:     new Date(row.submitted_at).getTime(),
+          };
+          setSubs(prev => [newSub, ...prev]);
+          setNewSubsCount(n => n + 1);
+        },
+      )
+      .subscribe();
+    return () => { supabase?.removeChannel(channel); };
   }, []);
 
   const loadStudents = (tid: string) => {
@@ -184,7 +219,10 @@ export default function TeacherPage() {
       });
   };
 
-  const reload = () => setSubs(getSubmissions());
+  const reload = () => {
+    setSubs(getSubmissions()); // ローカル即反映
+    getSubmissionsForTeacher(teacherId).then(remote => { if (remote.length > 0) setSubs(remote); });
+  };
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const todaySubs          = subs.filter(s => s.date === today);
@@ -626,6 +664,24 @@ export default function TeacherPage() {
         {/* ── 4. SUBMISSION LIST ── */}
         <section>
           <SectionLabel>受信トレイ</SectionLabel>
+
+          {/* Realtime 新着通知 */}
+          {newSubsCount > 0 && (
+            <div
+              className="mb-3 rounded-2xl px-4 py-3 flex items-center gap-3 cursor-pointer active:opacity-70"
+              style={{ background: 'linear-gradient(135deg,#34C759,#007AFF)' }}
+              onClick={() => setNewSubsCount(0)}
+            >
+              <span className="text-xl">🎵</span>
+              <div className="flex-1">
+                <p className="text-white font-bold text-sm">新しい練習が届きました！</p>
+                <p className="text-white/70 text-xs">{newSubsCount}件の新着提出</p>
+              </div>
+              <svg width="9" height="15" viewBox="0 0 9 15" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M1.5 1.5l6 6-6 6"/>
+              </svg>
+            </div>
+          )}
           {!mounted ? null : subs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center">
@@ -1796,6 +1852,7 @@ function SubmissionItem({ sub, onUpdate, profile }: {
       teacherCommentAt: Date.now(),
     };
     updateSubmission(updated);
+    saveTeacherCommentToSupabase(sub.id, comment.trim()); // Supabaseにも保存
     setSaved(true); setEditing(false); onUpdate();
     setTimeout(() => setSaved(false), 2000);
   };
@@ -1813,7 +1870,7 @@ function SubmissionItem({ sub, onUpdate, profile }: {
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold text-[#1C1C1E]">{profile?.nickname ?? '生徒'}からの提出</p>
+            <p className="text-xs font-semibold text-[#1C1C1E]">{sub.studentNickname ?? profile?.nickname ?? '生徒'}からの提出</p>
             <p className="text-[10px] text-[#8E8E93]">{dateJP(sub.date)} · {fmtDate(sub.submittedAt)}</p>
           </div>
           {!sub.teacherComment
@@ -1843,19 +1900,19 @@ function SubmissionItem({ sub, onUpdate, profile }: {
         </div>
       </div>
 
-      {/* Video player */}
+      {/* Video player — Supabase Storage URL なら直接再生、なければリンクボタン */}
       {sub.videoUrl && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 space-y-2">
           <video src={sub.videoUrl} controls playsInline preload="metadata"
             className="w-full rounded-xl bg-black max-h-64 object-contain" />
-        </div>
-      )}
-      {sub.videoFileName && !sub.videoUrl && (
-        <div className="mx-4 mb-3 bg-[#F2F2F7] rounded-xl px-3 py-2.5 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="2">
-            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
-          <p className="text-xs text-[#8E8E93]">動画は再読み込み後に無効になります（Supabase連携で解決）</p>
+          <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[11px] text-[#007AFF] font-semibold">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            動画を別タブで開く
+          </a>
         </div>
       )}
 

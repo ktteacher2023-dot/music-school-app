@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { PracticeRecord, Submission } from '@/types';
 import { getRecordsByDate, saveRecord, deleteRecord } from '@/lib/storage';
-import { saveSubmission } from '@/lib/submissions';
+import { saveSubmission, saveSubmissionToSupabase, uploadPracticeVideo } from '@/lib/submissions';
 import {
   MONSTERS, calcMonsterHp, getTitle, calcLevel, xpForLevel,
   streakMultiplier, streakLabel, getYesterday,
@@ -1442,7 +1442,7 @@ export default function StudentPage() {
     const f = e.target.files?.[0]; if (f) setVideoFile(f); e.target.value='';
   };
 
-  const handleAttack = () => {
+  const handleAttack = async () => {
     if (!canAttack) return;
     const m = parseInt(mins);
 
@@ -1451,9 +1451,21 @@ export default function StudentPage() {
     load();
 
     // ── Create submission ──
-    const videoUrl = videoFile ? URL.createObjectURL(videoFile) : undefined;
-    saveSubmission({ id:crypto.randomUUID(), date:today, songName:song.trim(), duration:m, rating,
-      videoUrl, videoFileName:videoFile?.name, submittedAt:Date.now() });
+    // 動画を Supabase Storage にアップロードしてから提出を保存する
+    const p = getProfile();
+    let persistentVideoUrl: string | undefined;
+    if (videoFile && p) {
+      persistentVideoUrl = (await uploadPracticeVideo(videoFile, p.nickname)) ?? undefined;
+    }
+    const sub = {
+      id: crypto.randomUUID(), date: today, songName: song.trim(), duration: m, rating,
+      studentNickname: p?.nickname,
+      videoUrl:      persistentVideoUrl,
+      videoFileName: videoFile?.name,
+      submittedAt:   Date.now(),
+    };
+    saveSubmission(sub);
+    saveSubmissionToSupabase(sub); // fire-and-forget（失敗してもローカルは維持）
 
     // ── Streak calc ──
     const yesterday = getYesterday(today);

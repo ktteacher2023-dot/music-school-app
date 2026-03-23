@@ -13,10 +13,9 @@ export interface Submission {
   songName: string;
   duration: number;
   rating: number;
-  // video: blob URL (session-only) or Supabase Storage URL (future)
-  videoUrl?: string;
+  studentNickname?: string;  // 提出した生徒（Supabase連携・先生画面での表示用）
+  videoUrl?: string;         // Supabase Storage の公開URL（永続）
   videoFileName?: string;
-  videoStoragePath?: string; // Supabase Storage path (future)
   teacherComment?: string;
   teacherCommentAt?: number;
   submittedAt: number;
