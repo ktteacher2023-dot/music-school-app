@@ -260,30 +260,14 @@ export default function TeacherPage() {
           <section>
             <SectionLabel>生徒一覧</SectionLabel>
 
-            {/* Invite URL */}
-            {teacherId && (
-              <div className="bg-white rounded-2xl shadow-sm px-4 py-3 mb-3 space-y-2">
-                <p className="text-[11px] font-black tracking-widest text-[#8E8E93] uppercase">生徒を招待する</p>
-                <p className="text-xs text-[#6C6C70]">このURLを生徒に共有すると、先生との紐付けが自動で行われます</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[#F2F2F7] rounded-xl px-3 py-2 text-[11px] text-[#6C6C70] truncate">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/setup?tid=${teacherId}` : ''}
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (typeof window === 'undefined') return;
-                      navigator.clipboard.writeText(`${window.location.origin}/setup?tid=${teacherId}`).then(() => {
-                        setInviteUrlCopied(true);
-                        setTimeout(() => setInviteUrlCopied(false), 2500);
-                      });
-                    }}
-                    className="px-3 py-2 rounded-xl text-xs font-bold text-white active:scale-[0.97] transition-all"
-                    style={{ background: inviteUrlCopied ? '#34C759' : 'linear-gradient(135deg,#007AFF,#5856D6)', minWidth: 52 }}>
-                    {inviteUrlCopied ? '✓' : 'コピー'}
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Invite section */}
+            {teacherId && <InviteSection teacherId={teacherId} copied={inviteUrlCopied} onCopy={() => {
+              if (typeof window === 'undefined') return;
+              navigator.clipboard.writeText(`${window.location.origin}/setup?tid=${teacherId}`).then(() => {
+                setInviteUrlCopied(true);
+                setTimeout(() => setInviteUrlCopied(false), 2500);
+              });
+            }} />}
 
             {loadingStudents ? (
               <div className="bg-white rounded-2xl shadow-sm flex items-center justify-center py-10">
@@ -1200,6 +1184,69 @@ function StudentDetailModal({ profile, stats, teacherId, onClose, onDelete }: {
           </button>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+// ─── Invite section ───────────────────────────────────────────────────────────
+function InviteSection({ teacherId, copied, onCopy }: {
+  teacherId: string; copied: boolean; onCopy: () => void;
+}) {
+  const [showQR, setShowQR] = useState(false);
+  const inviteUrl = typeof window !== 'undefined' ? `${window.location.origin}/setup?tid=${teacherId}` : '';
+
+  return (
+    <div className="mb-3">
+      {/* Main invite button */}
+      <button
+        onClick={onCopy}
+        className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.98] transition-all"
+        style={{ background: copied ? '#34C759' : 'linear-gradient(135deg,#007AFF,#5856D6)' }}>
+        {copied ? (
+          <>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span className="text-white text-sm font-black">コピーしました！</span>
+          </>
+        ) : (
+          <>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+              <rect x="8" y="2" width="8" height="4" rx="1"/>
+            </svg>
+            <span className="text-white text-sm font-black">新しい生徒を招待する（URLをコピー）</span>
+          </>
+        )}
+      </button>
+
+      {/* URL display + QR toggle */}
+      <div className="mt-2 bg-white rounded-2xl shadow-sm px-4 py-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-[#F2F2F7] rounded-xl px-3 py-2 text-[11px] text-[#6C6C70] truncate">
+            {inviteUrl}
+          </div>
+          <button
+            onClick={() => setShowQR(v => !v)}
+            className="px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
+            style={{ background: showQR ? '#F2F2F7' : 'linear-gradient(135deg,#FF9F0A,#FF6B00)', color: showQR ? '#6C6C70' : 'white' }}>
+            {showQR ? '閉じる' : 'QR'}
+          </button>
+        </div>
+        <p className="text-[10px] text-[#8E8E93]">
+          このURLを生徒に送ると、先生との紐付けが自動で行われます
+        </p>
+        {showQR && inviteUrl && (
+          <div className="flex flex-col items-center py-3 gap-2">
+            <div className="p-3 bg-white rounded-2xl shadow-sm border border-[#E5E5EA]">
+              <QRCodeSVG value={inviteUrl} size={160} />
+            </div>
+            <p className="text-[10px] text-[#8E8E93] text-center">
+              生徒のスマホでスキャンして登録できます
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

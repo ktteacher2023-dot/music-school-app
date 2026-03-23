@@ -29,6 +29,7 @@ export default function SetupPage() {
       teacher_id: teacherId || undefined,
     };
     saveProfile(p);
+    localStorage.setItem('app_role', 'student'); // この端末を生徒モードに固定
     saveProfileToSupabase(p); // 非同期・失敗しても続行
 
     setSavedName(nickname.trim());
@@ -39,6 +40,12 @@ export default function SetupPage() {
   // Pre-fill form from URL params
   // e.g. /setup?nick=花子&bday=2018-04-01&type=princess&tid=<teacher_uuid>
   useEffect(() => {
+    // If already registered on this device, skip to student view
+    const existingRole = localStorage.getItem('app_role');
+    if (existingRole === 'student') {
+      router.replace('/student');
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const nick = params.get('nick');
     const bday = params.get('bday');
@@ -48,7 +55,7 @@ export default function SetupPage() {
     if (bday) setBirthday(bday);
     if (type === 'knight' || type === 'princess') setCharType(type);
     if (tid)  setTeacherId(tid);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (step !== 'celebrate') return;
