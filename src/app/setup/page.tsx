@@ -458,6 +458,14 @@ function CelebrationScreen({ name, type }: { name: string; type: CharacterType }
             : '剣と盾で悪を倒せ\n最強の音楽家を目指せ！'}
         </p>
 
+        {/* Login hint */}
+        <p className="text-white/25 text-[11px] leading-relaxed text-center" style={{
+          opacity: phase >= 2 ? 1 : 0,
+          transition: 'opacity 0.6s ease 0.5s',
+        }}>
+          次からは「名前」と「パスワード」でログインできます
+        </p>
+
         {/* Loading dots */}
         <div className="flex gap-1.5 mt-2">
           {[0,1,2].map(i => (

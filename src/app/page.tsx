@@ -43,13 +43,16 @@ export default function RoleSelectPage() {
 
   // 前回選んだロールがあれば自動リダイレクト
   useEffect(() => {
-    const saved = localStorage.getItem(ROLE_KEY);
-    // Only auto-redirect teacher (student goes through setup flow manually)
-    if (saved === 'teacher') router.replace('/teacher');
-    // Clear stale student role if no profile
-    if (saved === 'student' && !localStorage.getItem('student_profile_v1')) {
-      localStorage.removeItem(ROLE_KEY);
+    const saved   = localStorage.getItem(ROLE_KEY);
+    const profile = localStorage.getItem('student_profile_v1');
+    // Auto-login: if already logged in as student with a saved profile, skip directly
+    if (saved === 'student' && profile) {
+      router.replace('/student');
+      return;
     }
+    // Clear stale student role that has no matching profile
+    if (saved === 'student' && !profile) localStorage.removeItem(ROLE_KEY);
+    if (saved === 'teacher') router.replace('/teacher');
   }, [router]);
 
   // PIN 入力処理
@@ -122,7 +125,7 @@ export default function RoleSelectPage() {
 
           {/* Student */}
           <button
-            onClick={() => { router.push('/setup'); }}
+            onClick={() => { router.push('/login'); }}
             className="w-full bg-white rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm active:scale-[0.98] active:bg-[#F2F2F7] transition-all text-left"
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
