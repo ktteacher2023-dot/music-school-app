@@ -88,6 +88,7 @@ export default function TeacherPage() {
   const [students,          setStudents]          = useState<Profile[]>([]);
   const [selectedStudent,   setSelectedStudent]   = useState<Profile | null>(null);
   const [loadingStudents,   setLoadingStudents]   = useState(true);
+  const [studentsError,     setStudentsError]     = useState('');
   const [inviteUrlCopied,   setInviteUrlCopied]   = useState(false);
 
   useEffect(() => {
@@ -99,19 +100,27 @@ export default function TeacherPage() {
 
     const tid = getOrCreateTeacherId();
     setTeacherId(tid);
-    if (supabase) {
-      supabase.from('profiles')
-        .select('*')
-        .eq('teacher_id', tid)
-        .order('created_at', { ascending: false })
-        .then(
-          ({ data }) => { setStudents((data as Profile[]) ?? []); setLoadingStudents(false); },
-          () => setLoadingStudents(false),
-        );
-    } else {
-      setLoadingStudents(false);
-    }
+    loadStudents(tid);
   }, []);
+
+  const loadStudents = (tid: string) => {
+    setLoadingStudents(true);
+    setStudentsError('');
+    if (!supabase) { setLoadingStudents(false); setStudentsError('Supabase未設定'); return; }
+    supabase.from('profiles')
+      .select('*')
+      .eq('teacher_id', tid)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[teacher] student fetch error:', error.message, error.details);
+          setStudentsError(error.message);
+        } else {
+          setStudents((data as Profile[]) ?? []);
+        }
+        setLoadingStudents(false);
+      });
+  };
 
   const reload = () => setSubs(getSubmissions());
 
@@ -268,6 +277,41 @@ export default function TeacherPage() {
                 setTimeout(() => setInviteUrlCopied(false), 2500);
               });
             }} />}
+
+            {/* Reload button */}
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => loadStudents(teacherId)}
+                disabled={loadingStudents}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white shadow-sm text-xs font-semibold text-[#007AFF] active:bg-[#F2F2F7] disabled:opacity-40 transition-all">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                再読み込み
+              </button>
+            </div>
+
+            {/* Error state */}
+            {studentsError && (
+              <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/20 rounded-2xl px-4 py-3 mb-2 space-y-1">
+                <p className="text-xs font-black text-[#FF3B30]">⚠️ データ取得エラー</p>
+                <p className="text-[11px] text-[#FF3B30]/80 font-mono break-all">{studentsError}</p>
+                <p className="text-[10px] text-[#8E8E93] mt-1">
+                  Supabase の profiles テーブルに teacher_id カラムが存在するか確認してください。
+                </p>
+              </div>
+            )}
+
+            {/* Orphan alert: local profile not linked to this teacher */}
+            {!loadingStudents && profile && !students.find(s => s.nickname === profile.nickname && s.birthday === profile.birthday) && (
+              <div className="bg-[#FF9F0A]/10 border border-[#FF9F0A]/25 rounded-2xl px-4 py-3 mb-2">
+                <p className="text-xs font-black text-[#FF9F0A]">⚠️ 紐付けされていない生徒を検出</p>
+                <p className="text-[11px] text-[#8E8E93] mt-1">
+                  このデバイスの生徒「{profile.nickname}」は teacher_id が一致しません。
+                  招待URLから再登録するか、Supabase を確認してください。
+                </p>
+              </div>
+            )}
 
             {loadingStudents ? (
               <div className="bg-white rounded-2xl shadow-sm flex items-center justify-center py-10">

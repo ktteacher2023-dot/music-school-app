@@ -22,15 +22,32 @@ export default function SetupPage() {
     if (!birthday)        { setError('生年月日を入力してください'); return; }
     setError('');
 
+    // tid をstateとURLの両方から取得（stateの更新タイミング問題に備える）
+    const urlTid = new URLSearchParams(window.location.search).get('tid') ?? '';
+    const resolvedTid = teacherId || urlTid || undefined;
+
     const p = {
       nickname:   nickname.trim(),
       birthday,
       type:       charType,
-      teacher_id: teacherId || undefined,
+      teacher_id: resolvedTid,
     };
     saveProfile(p);
     localStorage.setItem('app_role', 'student'); // この端末を生徒モードに固定
-    saveProfileToSupabase(p); // 非同期・失敗しても続行
+
+    const saveErr = await saveProfileToSupabase(p);
+    if (saveErr) {
+      // Supabase保存失敗 → ユーザーに表示しつつ続行（ローカルには保存済み）
+      console.warn('[setup] Supabase save error:', saveErr);
+      setError(`⚠️ クラウド保存に失敗: ${saveErr}`);
+      // エラーを表示しても3秒後に登録完了へ進む
+      setTimeout(() => {
+        setSavedName(nickname.trim());
+        setSavedType(charType);
+        setStep('celebrate');
+      }, 3000);
+      return;
+    }
 
     setSavedName(nickname.trim());
     setSavedType(charType);

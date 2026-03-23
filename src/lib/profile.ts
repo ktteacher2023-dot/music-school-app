@@ -56,17 +56,19 @@ export function patchProfile(updates: Partial<Profile>): void {
 
 import { supabase } from './supabase';
 
-/** Supabase の profiles テーブルにも保存する（失敗しても localStorage は維持） */
-export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Promise<void> {
-  if (!supabase) return;
-  try {
-    await supabase.from('profiles').insert({
-      nickname:   p.nickname,
-      birthday:   p.birthday,
-      type:       p.type,
-      teacher_id: p.teacher_id ?? null,
-    });
-  } catch (e) {
-    console.warn('[supabase] profile save failed:', e);
+/** Supabase の profiles テーブルにも保存する（失敗しても localStorage は維持）
+ *  Returns null on success, error message string on failure. */
+export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Promise<string | null> {
+  if (!supabase) return 'Supabase が設定されていません';
+  const { error } = await supabase.from('profiles').insert({
+    nickname:   p.nickname,
+    birthday:   p.birthday,
+    type:       p.type,
+    teacher_id: p.teacher_id ?? null,
+  });
+  if (error) {
+    console.warn('[supabase] profile save failed:', error.message, error.details);
+    return error.message;
   }
+  return null;
 }
