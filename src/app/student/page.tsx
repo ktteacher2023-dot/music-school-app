@@ -1344,7 +1344,7 @@ export default function StudentPage() {
 
   useEffect(() => {
     const p = getProfile();
-    if (!p) { router.replace('/setup'); return; }
+    if (!p) { localStorage.removeItem('app_role'); router.replace('/setup'); return; }
     setCharType(p.type ?? 'knight');
     setNickname(p.nickname ?? '');
     setAvatarUrl(p.avatar_url ?? null);

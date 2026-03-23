@@ -44,7 +44,15 @@ export default function RoleSelectPage() {
   // 前回選んだロールがあれば自動リダイレクト
   useEffect(() => {
     const saved = localStorage.getItem(ROLE_KEY);
-    if (saved === 'student') router.replace('/student');
+    if (saved === 'student') {
+      const profile = localStorage.getItem('student_profile_v1');
+      if (profile) {
+        router.replace('/student');
+      } else {
+        // stale role without profile — clear it to avoid infinite loop
+        localStorage.removeItem(ROLE_KEY);
+      }
+    }
     if (saved === 'teacher') router.replace('/teacher');
   }, [router]);
 
@@ -118,7 +126,7 @@ export default function RoleSelectPage() {
 
           {/* Student */}
           <button
-            onClick={() => { localStorage.setItem(ROLE_KEY, 'student'); router.push('/student'); }}
+            onClick={() => { router.push('/setup'); }}
             className="w-full bg-white rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm active:scale-[0.98] active:bg-[#F2F2F7] transition-all text-left"
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"

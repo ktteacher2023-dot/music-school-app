@@ -75,8 +75,13 @@ export default function SetupPage() {
     // If already registered on this device, skip to student view
     const existingRole = localStorage.getItem('app_role');
     if (existingRole === 'student') {
-      router.replace('/student');
-      return;
+      const existingProfile = localStorage.getItem('student_profile_v1');
+      if (existingProfile) {
+        router.replace('/student');
+        return;
+      }
+      // stale app_role without profile — clear to avoid loop
+      localStorage.removeItem('app_role');
     }
     const params = new URLSearchParams(window.location.search);
     const nick = params.get('nick');
