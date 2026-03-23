@@ -38,7 +38,8 @@ export default function SetupPage() {
     saveProfile(p);
     localStorage.setItem('app_role', 'student');
 
-    // Supabase に保存（5秒タイムアウト付き awaited）
+    // Supabase に保存（5秒タイムアウト）
+    // ローカルへの保存は完了済みなので、Supabaseの結果に関わらず登録完了へ進む
     setSaving(true);
     const savePromise = saveProfileToSupabase(p);
     const timeoutPromise = new Promise<string>(r => setTimeout(() => r('timeout'), 5000));
@@ -46,20 +47,12 @@ export default function SetupPage() {
     setSaving(false);
 
     if (saveErr) {
-      console.error('[setup] Supabase save result:', saveErr);
-      if (saveErr === 'timeout') {
-        // タイムアウトはローカル保存済みなので続行
-        console.warn('[setup] Supabase save timed out — proceeding anyway');
-      } else {
-        // 実際のエラー内容をそのまま表示（先生が原因を特定できるように）
-        setError(`⚠️ Supabaseエラー: ${saveErr}`);
-        // エラーでもローカルは保存済みなので3秒後に完了画面へ
-        setTimeout(() => { setSavedName(nickname.trim()); setSavedType(charType); setStep('celebrate'); }, 3000);
-        return;
-      }
+      // エラーはコンソールのみに出力。ユーザーへは表示せず続行する
+      console.warn('[setup] Supabase save skipped/failed (proceeding anyway):', saveErr);
+    } else {
+      console.log('[setup] Supabase save OK ✓  teacher_id=', resolvedTid ?? 'null');
     }
 
-    console.log('[setup] Supabase save OK ✓  teacher_id=', resolvedTid ?? 'null');
     setSavedName(nickname.trim());
     setSavedType(charType);
     setStep('celebrate');
