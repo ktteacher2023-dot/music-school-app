@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
 import { Submission } from '@/types';
-import { getSubmissions, updateSubmission, getSubmissionsForTeacher, saveTeacherCommentToSupabase } from '@/lib/submissions';
+import { getSubmissions, updateSubmission, getSubmissionsForTeacher, getLatestSubmissionPerStudent, saveTeacherCommentToSupabase } from '@/lib/submissions';
 import { getTitle, calcLevel, MONSTERS } from '@/lib/gameData';
 import { getProfile, Profile } from '@/lib/profile';
 import { getOrCreateTeacherId } from '@/lib/teacherIdentity';
@@ -99,6 +99,8 @@ export default function TeacherPage() {
   const [showAllProfiles,   setShowAllProfiles]   = useState(false);
   const [sqlNeeded,         setSqlNeeded]         = useState(false);
   const [newSubsCount,      setNewSubsCount]      = useState(0); // Realtime通知カウント
+  // 生徒ごとの最新提出: Record<nickname, Submission>
+  const [latestSubs, setLatestSubs] = useState<Record<string, import('@/types').Submission>>({});
 
   useEffect(() => {
     setMounted(true);
@@ -140,6 +142,10 @@ export default function TeacherPage() {
           };
           setSubs(prev => [newSub, ...prev]);
           setNewSubsCount(n => n + 1);
+          // 最新提出マップも更新
+          if (newSub.studentNickname) {
+            setLatestSubs(prev => ({ ...prev, [newSub.studentNickname!]: newSub }));
+          }
         },
       )
       .subscribe();
@@ -166,7 +172,13 @@ export default function TeacherPage() {
             setStudentsError(`[${error.code}] ${error.message}`);
           }
         } else {
-          setStudents((data as Profile[]) ?? []);
+          const fetched = (data as Profile[]) ?? [];
+          setStudents(fetched);
+          // 生徒一覧取得後、各生徒の最新提出を取得
+          if (fetched.length > 0) {
+            getLatestSubmissionPerStudent(fetched.map(s => s.nickname))
+              .then(map => setLatestSubs(map));
+          }
         }
         setLoadingStudents(false);
       });
@@ -545,12 +557,13 @@ export default function TeacherPage() {
                 {students.map((stu) => {
                   const stuCur = MONSTERS[0];
                   const isLocal = profile?.nickname === stu.nickname && profile?.birthday === stu.birthday;
-                  const stuSubs = isLocal ? todaySubs : [];
                   const stuStats = isLocal ? stats : null;
                   const stuLv = calcLevel(stuStats?.totalXp ?? 0);
                   const stuTitle = getTitle(stuLv);
                   const stuDaysSince = isLocal ? daysSincePractice : 999;
                   const stuWarning = isLocal && isWarning;
+                  const latestSub = latestSubs[stu.nickname];
+                  const latestIsToday = latestSub?.date === today;
                   return (
                     <div key={`${stu.nickname}-${stu.birthday}`}
                       className={`bg-white rounded-2xl shadow-sm overflow-hidden ${stuWarning ? 'ring-2 ring-[#FF3B30]/50' : ''}`}>
@@ -576,22 +589,34 @@ export default function TeacherPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-base font-black text-[#1C1C1E]">{stu.nickname}</span>
-                              {isLocal && (stuSubs.length > 0 ? (
+                              {latestIsToday ? (
                                 <span className="text-[10px] bg-[#34C759]/10 text-[#34C759] font-bold px-1.5 py-0.5 rounded-full">今日練習済み</span>
-                              ) : (
+                              ) : latestSub ? (
                                 <span className="text-[10px] bg-[#FF9F0A]/10 text-[#FF9F0A] font-bold px-1.5 py-0.5 rounded-full">今日未練習</span>
-                              ))}
+                              ) : null}
                             </div>
-                            {isLocal ? (
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-xs font-bold text-[#6C6C70]">Lv.{stuLv}</span>
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: stuTitle.color }}>
-                                  {stuTitle.icon} {stuTitle.title}
-                                </span>
-                                <span className="text-[10px] text-[#6C6C70]">🔥{stuStats?.streak ?? 0}日</span>
+                            {latestSub ? (
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span className="text-[11px] text-[#6C6C70]">{latestSub.songName}</span>
+                                <span className="text-[11px] font-bold text-[#007AFF]">{latestSub.duration}分</span>
+                                <StarRating value={latestSub.rating} readonly size="sm" />
+                                {latestSub.videoUrl && (
+                                  <a
+                                    href={latestSub.videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    className="flex items-center gap-0.5 text-[10px] bg-[#34C759]/10 text-[#34C759] font-bold px-1.5 py-0.5 rounded-full"
+                                  >
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                                    </svg>
+                                    最新動画
+                                  </a>
+                                )}
                               </div>
                             ) : (
-                              <p className="text-[11px] text-[#8E8E93] mt-0.5">{stu.birthday}</p>
+                              <p className="text-[11px] text-[#8E8E93] mt-0.5">{stu.birthday} · まだ提出なし</p>
                             )}
                           </div>
                           <svg width="9" height="14" viewBox="0 0 9 15" fill="none" stroke="#C7C7CC" strokeWidth="2.5" strokeLinecap="round">

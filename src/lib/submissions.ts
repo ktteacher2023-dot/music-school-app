@@ -52,11 +52,12 @@ export async function uploadPracticeVideo(
 // ─── Supabase DB: 提出データの保存と取得 ─────────────────────────────────────
 
 /** Supabase の submissions テーブルに保存する（失敗してもローカルは維持） */
-export async function saveSubmissionToSupabase(s: Submission): Promise<void> {
+export async function saveSubmissionToSupabase(s: Submission, teacherId?: string): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from('submissions').insert({
     id:               s.id,
     student_nickname: s.studentNickname ?? '',
+    teacher_id:       teacherId         ?? null,
     date:             s.date,
     song_name:        s.songName,
     duration:         s.duration,
@@ -109,6 +110,31 @@ export async function getSubmissionsForTeacher(teacherId: string): Promise<Submi
     .limit(200);
   if (error) { console.error('[submissions] fetch failed:', error.code, error.message); return []; }
   return (data ?? []).map(rowToSubmission);
+}
+
+/**
+ * 生徒ニックネームのリストに対して「最新1件」を取得し、
+ * Record<nickname, Submission> の形で返す
+ */
+export async function getLatestSubmissionPerStudent(
+  nicknames: string[],
+): Promise<Record<string, Submission>> {
+  if (!supabase || !nicknames.length) return {};
+  // 各生徒の最新数件を取り、client側でグループ化
+  const { data, error } = await supabase
+    .from('submissions')
+    .select('*')
+    .in('student_nickname', nicknames)
+    .order('submitted_at', { ascending: false })
+    .limit(nicknames.length * 10);
+  if (error) { console.error('[submissions] latest fetch failed:', error.message); return {}; }
+  const result: Record<string, Submission> = {};
+  for (const row of (data ?? [])) {
+    if (!result[row.student_nickname]) {
+      result[row.student_nickname] = rowToSubmission(row);
+    }
+  }
+  return result;
 }
 
 /** 先生コメントを Supabase に保存する */

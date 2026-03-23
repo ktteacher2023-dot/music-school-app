@@ -1465,7 +1465,7 @@ export default function StudentPage() {
       submittedAt:   Date.now(),
     };
     saveSubmission(sub);
-    saveSubmissionToSupabase(sub); // fire-and-forget（失敗してもローカルは維持）
+    saveSubmissionToSupabase(sub, p?.teacher_id); // teacher_id も送信（先生側クエリ最適化用）
 
     // ── Streak calc ──
     const yesterday = getYesterday(today);
