@@ -1275,6 +1275,7 @@ export default function StudentPage() {
 
   const [records,  setRecords]  = useState<PracticeRecord[]>([]);
   const [mounted,  setMounted]  = useState(false);
+  const [notRegistered, setNotRegistered] = useState(false);
   const [ms,       setMs]       = useState<MonsterState>(INIT);
   const [charType,  setCharType]  = useState<CharacterType>('knight');
   const [nickname,  setNickname]  = useState('');
@@ -1344,7 +1345,7 @@ export default function StudentPage() {
 
   useEffect(() => {
     const p = getProfile();
-    if (!p) { localStorage.removeItem('app_role'); router.replace('/setup'); return; }
+    if (!p) { localStorage.removeItem('app_role'); setNotRegistered(true); return; }
     setCharType(p.type ?? 'knight');
     setNickname(p.nickname ?? '');
     setAvatarUrl(p.avatar_url ?? null);
@@ -1619,6 +1620,28 @@ export default function StudentPage() {
   const totalMins = records.reduce((s,r)=>s+r.duration,0);
 
   const isPrincess = charType === 'princess';
+
+  if (notRegistered) {
+    return (
+      <div className="min-h-screen bg-[#1C1C1E] flex flex-col items-center justify-center gap-6 px-6">
+        <div className="w-16 h-16 rounded-full bg-[#2C2C2E] flex items-center justify-center text-3xl">🎵</div>
+        <p className="text-white font-bold text-xl">まだ登録されていません</p>
+        <p className="text-[#8E8E93] text-sm text-center">招待URLからアカウントを作成してください</p>
+        <button
+          onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+          className="mt-4 bg-[#FF3B30] text-white font-semibold px-6 py-3 rounded-2xl active:opacity-70"
+        >
+          データをリセットしてトップへ
+        </button>
+        <button
+          onClick={() => window.location.href = '/setup'}
+          className="bg-[#007AFF] text-white font-semibold px-6 py-3 rounded-2xl active:opacity-70"
+        >
+          プロフィールを作成する
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative" style={{ background: theme.bgPage }}>

@@ -44,16 +44,12 @@ export default function RoleSelectPage() {
   // 前回選んだロールがあれば自動リダイレクト
   useEffect(() => {
     const saved = localStorage.getItem(ROLE_KEY);
-    if (saved === 'student') {
-      const profile = localStorage.getItem('student_profile_v1');
-      if (profile) {
-        router.replace('/student');
-      } else {
-        // stale role without profile — clear it to avoid infinite loop
-        localStorage.removeItem(ROLE_KEY);
-      }
-    }
+    // Only auto-redirect teacher (student goes through setup flow manually)
     if (saved === 'teacher') router.replace('/teacher');
+    // Clear stale student role if no profile
+    if (saved === 'student' && !localStorage.getItem('student_profile_v1')) {
+      localStorage.removeItem(ROLE_KEY);
+    }
   }, [router]);
 
   // PIN 入力処理
@@ -163,6 +159,14 @@ export default function RoleSelectPage() {
         </div>
 
         <p className="text-xs text-[#C7C7CC] mt-10">タップするとモードに入れます</p>
+
+        {/* Session reset — hidden at bottom for troubleshooting */}
+        <button
+          onClick={() => { localStorage.clear(); window.location.reload(); }}
+          className="mt-8 text-xs text-[#3A3A3C] underline active:text-[#8E8E93]"
+        >
+          セッションをリセット（不具合時）
+        </button>
       </div>
 
       {/* ── PIN pad overlay ── */}

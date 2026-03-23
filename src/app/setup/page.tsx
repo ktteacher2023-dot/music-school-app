@@ -72,15 +72,9 @@ export default function SetupPage() {
   // Pre-fill form from URL params
   // e.g. /setup?nick=花子&bday=2018-04-01&type=princess&tid=<teacher_uuid>
   useEffect(() => {
-    // If already registered on this device, skip to student view
+    // Clear any stale app_role that has no matching profile
     const existingRole = localStorage.getItem('app_role');
-    if (existingRole === 'student') {
-      const existingProfile = localStorage.getItem('student_profile_v1');
-      if (existingProfile) {
-        router.replace('/student');
-        return;
-      }
-      // stale app_role without profile — clear to avoid loop
+    if (existingRole === 'student' && !localStorage.getItem('student_profile_v1')) {
       localStorage.removeItem('app_role');
     }
     const params = new URLSearchParams(window.location.search);
