@@ -1326,6 +1326,10 @@ export default function StudentPage() {
   // submission in-flight state (shows 送信中... on button)
   const [submitting, setSubmitting] = useState(false);
 
+  // account deletion
+  const [showSettingsSection, setShowSettingsSection] = useState(false);
+  const [showDeleteModal,     setShowDeleteModal]     = useState(false);
+
   // ink animation (knight attack button)
   const [inkPos, setInkPos] = useState<{x:number; y:number}|null>(null);
   const inkTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1582,6 +1586,21 @@ export default function StudentPage() {
   const handleAvatarUpload = async (file: File) => {
     const url = await uploadStudentAvatar(file);
     if (url) setAvatarUrl(url);
+  };
+
+  const handleDeleteAccount = async () => {
+    const p = getProfile();
+    const STUDENT_KEYS = [
+      'student_profile_v1', 'monster_state_v2', 'last_attack_date',
+      'badge_celebrated', 'music_practice_records', 'practice_submissions_v1',
+      'app_role',
+    ];
+    STUDENT_KEYS.forEach(k => localStorage.removeItem(k));
+    if (supabase && p) {
+      await supabase.from('profiles').delete()
+        .match({ nickname: p.nickname, birthday: p.birthday });
+    }
+    router.replace('/');
   };
 
   const handleAttackWithInk = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -2366,6 +2385,16 @@ export default function StudentPage() {
           </div>
         )}
 
+        {/* ── Delete account modal ── */}
+        {showDeleteModal && (
+          <DeleteAccountModal
+            nickname={nickname}
+            isPrincess={isPrincess}
+            onConfirm={handleDeleteAccount}
+            onClose={() => setShowDeleteModal(false)}
+          />
+        )}
+
         {/* ── Treasure videos (teacher lesson records) ── */}
         {mounted && (
           <div className="rounded-2xl overflow-hidden"
@@ -2505,6 +2534,211 @@ export default function StudentPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Hidden settings (account deletion) ── */}
+        {mounted && (
+          <div className="mt-2">
+            <button
+              onClick={() => setShowSettingsSection(v => !v)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl opacity-30 active:opacity-60 transition-opacity"
+              style={{ color: isPrincess ? '#9B4DCA' : 'rgba(255,255,255,0.5)' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              <span className="text-[11px]">設定</span>
+            </button>
+
+            {showSettingsSection && (
+              <div className="mt-1 rounded-2xl overflow-hidden"
+                style={isPrincess ? {
+                  background: 'rgba(255,240,255,0.7)',
+                  border: '1px solid rgba(199,125,255,0.25)',
+                } : {
+                  background: 'rgba(10,6,30,0.9)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                <div className="px-4 py-3 border-b"
+                  style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.15)' : 'rgba(255,255,255,0.06)' }}>
+                  <p className="text-[10px] font-black tracking-widest uppercase"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.6)' : 'rgba(255,255,255,0.25)' }}>
+                    アカウント
+                  </p>
+                </div>
+                <div className="px-4 py-4">
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-opacity active:opacity-70"
+                    style={{ background: 'rgba(255,59,48,0.1)', color: '#FF3B30', border: '1px solid rgba(255,59,48,0.2)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                    アカウントを消す
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Account deletion modal (3-step guard) ─────────────────────────────────────
+function DeleteAccountModal({ nickname, isPrincess, onConfirm, onClose }: {
+  nickname: string; isPrincess: boolean;
+  onConfirm: () => Promise<void>; onClose: () => void;
+}) {
+  const [step,    setStep]    = useState<1 | 2 | 3>(1);
+  const [checked, setChecked] = useState(false);
+  const [input,   setInput]   = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const accent   = isPrincess ? '#C77DFF' : '#FF9F0A';
+  const bg       = isPrincess ? 'linear-gradient(180deg,#FFF0FF,#F0E8FF)' : 'linear-gradient(180deg,#0a0e20,#080c18)';
+  const cardBg   = isPrincess ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.06)';
+  const cardBdr  = isPrincess ? '1px solid rgba(199,125,255,0.3)' : '1px solid rgba(255,255,255,0.1)';
+  const textMain = isPrincess ? '#3d004d' : 'white';
+  const textSub  = isPrincess ? 'rgba(100,0,120,0.55)' : 'rgba(255,255,255,0.4)';
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-end"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)' }}>
+      <div className="w-full max-w-sm rounded-t-3xl px-5 pt-6"
+        style={{ background: bg, paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
+
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 mb-5">
+          {[1,2,3].map(n => (
+            <div key={n} className="w-2 h-2 rounded-full transition-all"
+              style={{ background: n <= step ? accent : 'rgba(128,128,128,0.3)' }} />
+          ))}
+        </div>
+
+        {/* ── Step 1: Warning ── */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 py-2">
+              <span className="text-5xl">😢</span>
+              <h2 className="text-xl font-black text-center" style={{ color: textMain }}>
+                本当に消しちゃうの？
+              </h2>
+              <div className="rounded-2xl px-4 py-3 text-center space-y-1 w-full"
+                style={{ background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.2)' }}>
+                <p className="text-sm font-bold text-[#FF3B30]">今までの練習記録が全部消えちゃうよ？</p>
+                <p className="text-xs mt-1" style={{ color: textSub }}>モンスター討伐・バッジ・練習履歴、すべて消えます</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={onClose}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold"
+                style={{ background: cardBg, border: cardBdr, color: accent }}>
+                やめておく
+              </button>
+              <button onClick={() => setStep(2)}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold text-white"
+                style={{ background: 'rgba(255,59,48,0.8)' }}>
+                続ける…
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Checkbox ── */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 py-2">
+              <span className="text-5xl">⚠️</span>
+              <h2 className="text-xl font-black text-center" style={{ color: textMain }}>
+                本当の本当に<br/>よろしいですか？
+              </h2>
+            </div>
+            <button
+              onClick={() => setChecked(v => !v)}
+              className="w-full rounded-2xl px-4 py-3 flex items-center gap-3 active:opacity-80"
+              style={{ background: checked ? 'rgba(255,59,48,0.12)' : cardBg, border: checked ? '1px solid rgba(255,59,48,0.4)' : cardBdr }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                style={{ background: checked ? '#FF3B30' : 'rgba(128,128,128,0.2)', border: checked ? 'none' : '1.5px solid rgba(128,128,128,0.4)' }}>
+                {checked && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </div>
+              <p className="text-sm font-bold text-left" style={{ color: textMain }}>
+                データが消えることを理解した上で、削除に同意します
+              </p>
+            </button>
+            <div className="flex gap-3">
+              <button onClick={() => setStep(1)}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold"
+                style={{ background: cardBg, border: cardBdr, color: textSub }}>
+                戻る
+              </button>
+              <button onClick={() => { setChecked(false); setStep(3); }} disabled={!checked}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold text-white"
+                style={{ background: checked ? 'rgba(255,59,48,0.8)' : 'rgba(128,128,128,0.3)', opacity: checked ? 1 : 0.5 }}>
+                次へ
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Type nickname ── */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 py-2">
+              <span className="text-5xl">✍️</span>
+              <h2 className="text-xl font-black text-center" style={{ color: textMain }}>
+                最後の確認
+              </h2>
+              <p className="text-sm text-center leading-relaxed" style={{ color: textSub }}>
+                下の欄に自分の名前<br/>
+                <span className="font-black" style={{ color: accent }}>「{nickname}」</span><br/>
+                を入力してください
+              </p>
+            </div>
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={nickname}
+              autoComplete="off"
+              className="w-full rounded-2xl px-4 py-3 text-sm font-bold outline-none text-center"
+              style={{
+                background: cardBg,
+                border: input === nickname ? '1.5px solid #FF3B30' : cardBdr,
+                color: textMain,
+              }}
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setInput(''); setStep(2); }}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold"
+                style={{ background: cardBg, border: cardBdr, color: textSub }}>
+                戻る
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={input !== nickname || loading}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2"
+                style={{ background: input === nickname ? '#FF3B30' : 'rgba(128,128,128,0.3)', opacity: input === nickname && !loading ? 1 : 0.5 }}>
+                {loading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : 'さようなら 🗑️'}
+              </button>
+            </div>
           </div>
         )}
 
