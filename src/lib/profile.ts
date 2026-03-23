@@ -72,13 +72,14 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
   if (!error) return null; // 成功
 
   // エラー詳細をコンソールに出力（原因特定用）
-  console.error(
-    '[supabase] profile INSERT failed\n',
-    '  code   :', error.code,
-    '\n  message:', error.message,
-    '\n  details:', error.details,
-    '\n  hint   :', error.hint,
-  );
+  console.error('[supabase] profile INSERT failed', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+
+  const errStr = [
+    `code: ${error.code}`,
+    `message: ${error.message}`,
+    error.details ? `details: ${error.details}` : '',
+    error.hint    ? `hint: ${error.hint}`        : '',
+  ].filter(Boolean).join(' | ');
 
   // teacher_id カラムが存在しない場合 (code=42703) → カラムなしで再試行
   if (error.code === '42703') {
@@ -89,9 +90,15 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
       type:     p.type,
     });
     if (!err2) return null; // フォールバックで成功
-    console.error('[supabase] fallback INSERT also failed:', err2.code, err2.message);
-    return `[${err2.code}] ${err2.message}`;
+    const err2Str = [
+      `code: ${err2.code}`,
+      `message: ${err2.message}`,
+      err2.details ? `details: ${err2.details}` : '',
+      err2.hint    ? `hint: ${err2.hint}`        : '',
+    ].filter(Boolean).join(' | ');
+    console.error('[supabase] fallback INSERT also failed:', err2Str);
+    return err2Str;
   }
 
-  return `[${error.code}] ${error.message}`;
+  return errStr;
 }

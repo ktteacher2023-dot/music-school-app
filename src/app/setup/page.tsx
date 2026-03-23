@@ -27,7 +27,7 @@ export default function SetupPage() {
     const urlTid = new URLSearchParams(window.location.search).get('tid') ?? '';
     const resolvedTid = teacherId || urlTid || undefined;
 
-    console.log('[setup] registration start — tid:', resolvedTid || '(なし)', '| url:', window.location.href);
+    console.log('[setup] registration start — teacher_id:', resolvedTid ?? '(なし)', '| url:', window.location.href);
 
     const p = {
       nickname:   nickname.trim(),
@@ -48,19 +48,15 @@ export default function SetupPage() {
     if (saveErr) {
       console.error('[setup] Supabase save result:', saveErr);
       if (saveErr === 'timeout') {
+        // タイムアウトはローカル保存済みなので続行
         console.warn('[setup] Supabase save timed out — proceeding anyway');
-      } else if (saveErr.includes('42703')) {
-        console.error('[setup] teacher_id カラムが存在しません！\n' +
-          'Supabase SQL Editor で実行: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;');
-        setError('⚠️ 先生に「teacher_idカラムがありません」と伝えてください');
-      } else if (saveErr.includes('42501') || saveErr.includes('permission')) {
-        setError('⚠️ 保存権限エラー。先生に連絡してください');
       } else {
-        setError(`⚠️ クラウド保存エラー: ${saveErr}`);
+        // 実際のエラー内容をそのまま表示（先生が原因を特定できるように）
+        setError(`⚠️ Supabaseエラー: ${saveErr}`);
+        // エラーでもローカルは保存済みなので3秒後に完了画面へ
+        setTimeout(() => { setSavedName(nickname.trim()); setSavedType(charType); setStep('celebrate'); }, 3000);
+        return;
       }
-      // エラーでもローカルは保存済みなので2秒後に完了画面へ
-      setTimeout(() => { setSavedName(nickname.trim()); setSavedType(charType); setStep('celebrate'); }, 2000);
-      return;
     }
 
     console.log('[setup] Supabase save OK ✓  teacher_id=', resolvedTid ?? 'null');
