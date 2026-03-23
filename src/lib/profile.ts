@@ -60,15 +60,38 @@ import { supabase } from './supabase';
  *  Returns null on success, error message string on failure. */
 export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Promise<string | null> {
   if (!supabase) return 'Supabase が設定されていません';
+
+  // まず teacher_id を含めて保存を試みる
   const { error } = await supabase.from('profiles').insert({
     nickname:   p.nickname,
     birthday:   p.birthday,
     type:       p.type,
     teacher_id: p.teacher_id ?? null,
   });
-  if (error) {
-    console.warn('[supabase] profile save failed:', error.message, error.details);
-    return error.message;
+
+  if (!error) return null; // 成功
+
+  // エラー詳細をコンソールに出力（原因特定用）
+  console.error(
+    '[supabase] profile INSERT failed\n',
+    '  code   :', error.code,
+    '\n  message:', error.message,
+    '\n  details:', error.details,
+    '\n  hint   :', error.hint,
+  );
+
+  // teacher_id カラムが存在しない場合 (code=42703) → カラムなしで再試行
+  if (error.code === '42703') {
+    console.warn('[supabase] teacher_id column missing — retrying without it');
+    const { error: err2 } = await supabase.from('profiles').insert({
+      nickname: p.nickname,
+      birthday: p.birthday,
+      type:     p.type,
+    });
+    if (!err2) return null; // フォールバックで成功
+    console.error('[supabase] fallback INSERT also failed:', err2.code, err2.message);
+    return `[${err2.code}] ${err2.message}`;
   }
-  return null;
+
+  return `[${error.code}] ${error.message}`;
 }

@@ -35,19 +35,10 @@ export default function SetupPage() {
     saveProfile(p);
     localStorage.setItem('app_role', 'student'); // この端末を生徒モードに固定
 
-    const saveErr = await saveProfileToSupabase(p);
-    if (saveErr) {
-      // Supabase保存失敗 → ユーザーに表示しつつ続行（ローカルには保存済み）
-      console.warn('[setup] Supabase save error:', saveErr);
-      setError(`⚠️ クラウド保存に失敗: ${saveErr}`);
-      // エラーを表示しても3秒後に登録完了へ進む
-      setTimeout(() => {
-        setSavedName(nickname.trim());
-        setSavedType(charType);
-        setStep('celebrate');
-      }, 3000);
-      return;
-    }
+    // Supabase保存（非同期・失敗してもローカルは保存済みなので登録は完了とする）
+    saveProfileToSupabase(p).then(saveErr => {
+      if (saveErr) console.warn('[setup] Supabase sync failed (local save OK):', saveErr);
+    });
 
     setSavedName(nickname.trim());
     setSavedType(charType);
