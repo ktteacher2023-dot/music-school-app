@@ -14,6 +14,7 @@ export interface Profile {
   avatar_url?: string;
   teacher_name?: string; // 担当講師名（先生がSupabaseから設定）
   teacher_id?: string;   // 担当先生のUUID（招待URLから自動設定）
+  password?: string;     // 生徒用パスワード（保護者が管理）
 }
 
 const KEY = 'student_profile_v1';
@@ -66,8 +67,9 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
     nickname:   p.nickname,
     birthday:   p.birthday,
     type:       p.type,
-    teacher_id: p.teacher_id  ?? null,
-    avatar_url: p.avatar_url  ?? null,
+    teacher_id: p.teacher_id ?? null,
+    avatar_url: p.avatar_url ?? null,
+    password:   p.password   ?? null,
   };
 
   const { error } = await supabase.from('profiles').insert(payload);
@@ -98,4 +100,23 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
   }
 
   return toErrStr(error);
+}
+
+/** 生徒のパスワードを Supabase に保存し、localStorage も更新する */
+export async function updateStudentPassword(
+  nickname: string,
+  birthday: string,
+  newPassword: string,
+): Promise<string | null> {
+  patchProfile({ password: newPassword });
+  if (!supabase) return null; // ローカルのみ更新して終了
+  const { error } = await supabase
+    .from('profiles')
+    .update({ password: newPassword })
+    .match({ nickname, birthday });
+  if (error) {
+    console.error('[supabase] password update failed', error);
+    return `[${error.code}] ${error.message}`;
+  }
+  return null;
 }

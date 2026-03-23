@@ -665,6 +665,9 @@ function StudentDetailModal({ profile, stats, teacherId, onClose, onDelete }: {
   const [teacherNameInput, setTeacherNameInput] = useState('');
   const [teacherNameSaving, setTeacherNameSaving] = useState(false);
   const [teacherNameSaved,  setTeacherNameSaved]  = useState(false);
+  // ── Student password (backup key) ───────────────────────────────────────────
+  const [stuPassword, setStuPassword] = useState<string | null>(null);
+  const [showStuPw,   setShowStuPw]   = useState(false);
   // ── Login URL / QR ──────────────────────────────────────────────────────────
   const [showQR,    setShowQR]    = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
@@ -722,6 +725,15 @@ function StudentDetailModal({ profile, stats, teacherId, onClose, onDelete }: {
             localStorage.setItem(`teacher_name_${profile.nickname}`, name);
           }
         }, () => {});
+    }
+    // Load student password (for teacher's reference)
+    if (supabase) {
+      supabase.from('profiles')
+        .select('password')
+        .match({ nickname: profile.nickname, birthday: profile.birthday })
+        .maybeSingle()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((r: any) => { if (r?.data?.password) setStuPassword(r.data.password); }, () => {});
     }
     fetchLessonRecords(profile.nickname, profile.birthday).then(recs => {
       setRecords(recs);
@@ -905,6 +917,47 @@ function StudentDetailModal({ profile, stats, teacherId, onClose, onDelete }: {
               保存しました！生徒の画面に表示されます。
             </p>
           )}
+        </div>
+
+        {/* ── 生徒パスワード（合鍵） ── */}
+        <div className="rounded-2xl overflow-hidden"
+          style={isPrincess ? {
+            background: 'rgba(255,255,255,0.55)',
+            border: '1px solid rgba(199,125,255,0.3)',
+          } : {
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,107,0,0.25)',
+          }}>
+          <div className="px-4 pt-3 pb-2 border-b flex items-center gap-2"
+            style={{ borderColor: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(255,107,0,0.15)' }}>
+            <p className="text-[11px] font-black tracking-widest flex-1"
+              style={{ color: isPrincess ? 'rgba(199,125,255,0.7)' : 'rgba(255,107,0,0.7)' }}>
+              {isPrincess ? '✦ 生徒パスワード（合鍵）' : '▸ STUDENT PASSWORD (BACKUP KEY)'}
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-3">
+            {stuPassword ? (
+              <>
+                <span className="flex-1 text-lg font-black tracking-[0.25em]"
+                  style={{ color: isPrincess ? '#7B1FA2' : 'white', filter: showStuPw ? 'none' : 'blur(6px)', transition: 'filter 0.2s' }}>
+                  {stuPassword}
+                </span>
+                <button
+                  onClick={() => setShowStuPw(v => !v)}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-[0.97]"
+                  style={{
+                    background: isPrincess ? 'rgba(199,125,255,0.15)' : 'rgba(255,107,0,0.15)',
+                    color: accent,
+                  }}>
+                  {showStuPw ? '隠す' : '表示'}
+                </button>
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: isPrincess ? 'rgba(100,0,120,0.4)' : 'rgba(255,255,255,0.3)' }}>
+                まだパスワードが設定されていません
+              </p>
+            )}
+          </div>
         </div>
 
         {/* ── 生徒ログインURL / QRコード ── */}

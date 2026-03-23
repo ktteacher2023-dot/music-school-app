@@ -10,7 +10,7 @@ import {
 } from '@/lib/gameData';
 import PracticeCard from '@/components/PracticeCard';
 import StarRating from '@/components/StarRating';
-import { getProfile, type CharacterType } from '@/lib/profile';
+import { getProfile, updateStudentPassword, type CharacterType } from '@/lib/profile';
 import { getTheme } from '@/lib/theme';
 import { COMPANIONS } from '@/lib/companionData';
 import { awardBadge, hasBadge, getBadgeInfo, getBadges, type BadgeId } from '@/lib/badges';
@@ -1327,9 +1327,10 @@ export default function StudentPage() {
   // submission in-flight state (shows 送信中... on button)
   const [submitting, setSubmitting] = useState(false);
 
-  // account deletion
+  // account deletion / settings
   const [showSettingsSection, setShowSettingsSection] = useState(false);
   const [showDeleteModal,     setShowDeleteModal]     = useState(false);
+  const [showPasswordModal,   setShowPasswordModal]   = useState(false);
 
   // ink animation (knight attack button)
   const [inkPos, setInkPos] = useState<{x:number; y:number}|null>(null);
@@ -2409,6 +2410,14 @@ export default function StudentPage() {
         )}
 
         {/* ── Delete account modal ── */}
+        {showPasswordModal && (
+          <PasswordChangeModal
+            nickname={nickname}
+            isPrincess={isPrincess}
+            onClose={() => setShowPasswordModal(false)}
+          />
+        )}
+
         {showDeleteModal && (
           <DeleteAccountModal
             nickname={nickname}
@@ -2590,7 +2599,19 @@ export default function StudentPage() {
                     アカウント
                   </p>
                 </div>
-                <div className="px-4 py-4">
+                <div className="px-4 py-4 space-y-2">
+                  {/* パスワード変更 */}
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-opacity active:opacity-70"
+                    style={{ background: isPrincess ? 'rgba(0,122,255,0.08)' : 'rgba(255,159,10,0.1)', color: isPrincess ? '#007AFF' : '#FF9F0A', border: isPrincess ? '1px solid rgba(0,122,255,0.2)' : '1px solid rgba(255,159,10,0.25)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    パスワードを変える
+                  </button>
+                  {/* アカウント削除 */}
                   <button
                     onClick={() => setShowDeleteModal(true)}
                     className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-opacity active:opacity-70"
@@ -2765,6 +2786,127 @@ function DeleteAccountModal({ nickname, isPrincess, onConfirm, onClose }: {
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// ─── Password change modal ──────────────────────────────────────────────────
+function PasswordChangeModal({ nickname, isPrincess, onClose }: {
+  nickname: string; isPrincess: boolean; onClose: () => void;
+}) {
+  const profile = getProfile();
+  const [newPw,   setNewPw]   = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPw,  setShowPw]  = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [error,   setError]   = useState('');
+
+  const accent      = isPrincess ? '#C77DFF' : '#FF9F0A';
+  const cardBg      = isPrincess ? 'rgba(255,255,255,0.97)' : 'rgba(18,18,38,0.98)';
+  const textPrimary = isPrincess ? '#3d004d' : 'white';
+  const textSub     = isPrincess ? 'rgba(100,0,120,0.55)' : 'rgba(255,255,255,0.4)';
+  const inputStyle  = isPrincess
+    ? { background: 'rgba(255,240,255,0.85)', color: '#3d004d', border: '1px solid rgba(199,125,255,0.35)' }
+    : { background: 'rgba(255,255,255,0.07)', color: 'white',   border: '1px solid rgba(255,255,255,0.12)' };
+
+  const handleSave = async () => {
+    if (!newPw.trim())       { setError('パスワードを入力してください'); return; }
+    if (newPw !== confirm)   { setError('パスワードが一致しません'); return; }
+    setError('');
+    setSaving(true);
+    await updateStudentPassword(profile?.nickname ?? nickname, profile?.birthday ?? '', newPw.trim());
+    setSaving(false);
+    setSaved(true);
+    setTimeout(onClose, 1600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+      <div className="w-full max-w-md rounded-t-3xl px-6 pt-6 pb-10 space-y-4"
+        style={{ background: cardBg }}>
+
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-black tracking-widest uppercase" style={{ color: accent }}>
+            パスワード変更
+          </p>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+            style={{ background: 'rgba(128,128,128,0.15)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={textPrimary} strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <p className="text-sm" style={{ color: textSub }}>
+          {nickname} のパスワードを設定します。先生も確認できます。
+        </p>
+
+        {profile?.password && (
+          <div className="rounded-xl px-3 py-2.5 flex items-center gap-2"
+            style={{ background: isPrincess ? 'rgba(199,125,255,0.08)' : 'rgba(255,255,255,0.05)', border: `1px solid ${accent}40` }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+              stroke={accent} strokeWidth="2" strokeLinecap="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span className="text-xs" style={{ color: textSub }}>現在：</span>
+            <span className="text-sm font-bold tracking-widest" style={{ color: accent }}>
+              {profile.password}
+            </span>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="relative">
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={newPw}
+              onChange={e => { setNewPw(e.target.value); setError(''); }}
+              placeholder="新しいパスワード"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none pr-11"
+              style={inputStyle}
+            />
+            <button onClick={() => setShowPw(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 active:opacity-100">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke={textPrimary} strokeWidth="2" strokeLinecap="round">
+                {showPw
+                  ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                  : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                }
+              </svg>
+            </button>
+          </div>
+
+          <input
+            type={showPw ? 'text' : 'password'}
+            value={confirm}
+            onChange={e => { setConfirm(e.target.value); setError(''); }}
+            placeholder="もう一度入力"
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            style={inputStyle}
+          />
+
+          {error && (
+            <p className="text-xs font-semibold" style={{ color: '#FF3B30' }}>{error}</p>
+          )}
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving || saved}
+          className="w-full py-3.5 rounded-2xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-60"
+          style={{
+            background: `linear-gradient(135deg,${isPrincess ? '#FF6B9D,#C77DFF' : '#FF6B00,#FF9F0A'})`,
+            color: 'white',
+          }}>
+          {saved ? '✓ 保存しました！' : saving ? '保存中…' : 'パスワードを保存する'}
+        </button>
       </div>
     </div>
   );
