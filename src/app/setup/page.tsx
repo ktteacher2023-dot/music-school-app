@@ -10,6 +10,7 @@ export default function SetupPage() {
   const [birthday,  setBirthday] = useState('');
   const [charType,  setCharType] = useState<CharacterType | null>(null);
   const [error,     setError]    = useState('');
+  const [saving,    setSaving]   = useState(false);
   const [savedName, setSavedName] = useState('');
   const [savedType,  setSavedType]  = useState<CharacterType>('knight');
   const [teacherId,  setTeacherId]  = useState('');
@@ -26,13 +27,7 @@ export default function SetupPage() {
     const urlTid = new URLSearchParams(window.location.search).get('tid') ?? '';
     const resolvedTid = teacherId || urlTid || undefined;
 
-    console.log('[setup] registration start', {
-      nickname: nickname.trim(),
-      resolvedTid,
-      teacherIdState: teacherId,
-      urlTid,
-      fullUrl: window.location.href,
-    });
+    console.log('[setup] registration start — tid:', resolvedTid || '(なし)', '| url:', window.location.href);
 
     const p = {
       nickname:   nickname.trim(),
@@ -41,19 +36,34 @@ export default function SetupPage() {
       teacher_id: resolvedTid,
     };
     saveProfile(p);
-    localStorage.setItem('app_role', 'student'); // この端末を生徒モードに固定
+    localStorage.setItem('app_role', 'student');
 
-    // Supabase保存（非同期・失敗してもローカルは保存済みなので登録は完了とする）
-    saveProfileToSupabase(p).then(saveErr => {
-      if (saveErr) {
-        console.error('[setup] Supabase sync failed:', saveErr,
-          '\n→ teacher_id カラムが未作成の可能性があります。Supabase SQL Editor で以下を実行:\n' +
-          'ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;');
+    // Supabase に保存（5秒タイムアウト付き awaited）
+    setSaving(true);
+    const savePromise = saveProfileToSupabase(p);
+    const timeoutPromise = new Promise<string>(r => setTimeout(() => r('timeout'), 5000));
+    const saveErr = await Promise.race([savePromise, timeoutPromise]);
+    setSaving(false);
+
+    if (saveErr) {
+      console.error('[setup] Supabase save result:', saveErr);
+      if (saveErr === 'timeout') {
+        console.warn('[setup] Supabase save timed out — proceeding anyway');
+      } else if (saveErr.includes('42703')) {
+        console.error('[setup] teacher_id カラムが存在しません！\n' +
+          'Supabase SQL Editor で実行: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;');
+        setError('⚠️ 先生に「teacher_idカラムがありません」と伝えてください');
+      } else if (saveErr.includes('42501') || saveErr.includes('permission')) {
+        setError('⚠️ 保存権限エラー。先生に連絡してください');
       } else {
-        console.log('[setup] Supabase sync OK ✓ teacher_id=', resolvedTid);
+        setError(`⚠️ クラウド保存エラー: ${saveErr}`);
       }
-    });
+      // エラーでもローカルは保存済みなので2秒後に完了画面へ
+      setTimeout(() => { setSavedName(nickname.trim()); setSavedType(charType); setStep('celebrate'); }, 2000);
+      return;
+    }
 
+    console.log('[setup] Supabase save OK ✓  teacher_id=', resolvedTid ?? 'null');
     setSavedName(nickname.trim());
     setSavedType(charType);
     setStep('celebrate');
@@ -296,7 +306,8 @@ export default function SetupPage() {
         {/* ── Submit ── */}
         <button
           onClick={handleSubmit}
-          className="w-full py-4 rounded-2xl text-white text-base font-black tracking-wide shadow-lg active:scale-[0.97] transition-all"
+          disabled={saving}
+          className="w-full py-4 rounded-2xl text-white text-base font-black tracking-wide shadow-lg active:scale-[0.97] transition-all disabled:opacity-70 flex items-center justify-center gap-2"
           style={{
             background: isPrincess
               ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
@@ -309,7 +320,9 @@ export default function SetupPage() {
               ? '0 4px 20px rgba(0,122,255,0.4)'
               : 'none',
           }}>
-          {isPrincess ? '🌸 プリンセスの冒険へ！' : isKnight ? '⚔️ 騎士の冒険へ！' : '冒険をはじめる'}
+          {saving
+            ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"/><span>登録中…</span></>
+            : isPrincess ? '🌸 プリンセスの冒険へ！' : isKnight ? '⚔️ 騎士の冒険へ！' : '冒険をはじめる'}
         </button>
 
         {/* Decorative footer */}

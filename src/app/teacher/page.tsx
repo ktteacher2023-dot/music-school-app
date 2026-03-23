@@ -94,6 +94,10 @@ export default function TeacherPage() {
   const [loadingOrphans,    setLoadingOrphans]    = useState(false);
   const [showDebug,         setShowDebug]         = useState(false);
   const [linkingId,         setLinkingId]         = useState<string | null>(null);
+  const [allProfiles,       setAllProfiles]       = useState<(Profile & { teacher_id?: string })[]>([]);
+  const [loadingAll,        setLoadingAll]        = useState(false);
+  const [showAllProfiles,   setShowAllProfiles]   = useState(false);
+  const [sqlNeeded,         setSqlNeeded]         = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -110,6 +114,7 @@ export default function TeacherPage() {
   const loadStudents = (tid: string) => {
     setLoadingStudents(true);
     setStudentsError('');
+    setSqlNeeded(false);
     if (!supabase) { setLoadingStudents(false); setStudentsError('Supabase未設定'); return; }
     supabase.from('profiles')
       .select('*')
@@ -118,7 +123,13 @@ export default function TeacherPage() {
       .then(({ data, error }) => {
         if (error) {
           console.error('[teacher] student fetch error:', error.code, error.message);
-          setStudentsError(`[${error.code}] ${error.message}`);
+          if (error.code === '42703') {
+            // teacher_id カラムが存在しない
+            setSqlNeeded(true);
+            setStudentsError('teacher_id カラムが存在しません。下のSQLを実行してください。');
+          } else {
+            setStudentsError(`[${error.code}] ${error.message}`);
+          }
         } else {
           setStudents((data as Profile[]) ?? []);
         }
@@ -150,10 +161,27 @@ export default function TeacherPage() {
     setLinkingId(null);
     if (!error) {
       setOrphans(prev => prev.filter(s => !(s.nickname === stu.nickname && s.birthday === stu.birthday)));
+      setAllProfiles(prev => prev.map(s =>
+        s.nickname === stu.nickname && s.birthday === stu.birthday
+          ? { ...s, teacher_id: teacherId } : s
+      ));
       setStudents(prev => [{ ...stu, teacher_id: teacherId }, ...prev]);
     } else {
       console.error('[teacher] link failed:', error.message);
     }
+  };
+
+  const loadAllProfiles = () => {
+    if (!supabase) return;
+    setLoadingAll(true);
+    supabase.from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) setAllProfiles((data as (Profile & { teacher_id?: string })[]) ?? []);
+        else console.error('[teacher] allProfiles fetch error:', error.message);
+        setLoadingAll(false);
+      });
   };
 
   const reload = () => setSubs(getSubmissions());
@@ -330,68 +358,126 @@ export default function TeacherPage() {
               </button>
             </div>
 
-            {/* Debug / orphan panel */}
+            {/* Debug / all-profiles panel */}
             {showDebug && (
               <div className="mb-3 rounded-2xl overflow-hidden border border-[#FF9F0A]/30 bg-[#FF9F0A]/5">
                 <div className="px-4 py-3 border-b border-[#FF9F0A]/20">
                   <p className="text-[11px] font-black tracking-widest text-[#FF9F0A] uppercase">診断パネル</p>
                 </div>
-                <div className="px-4 py-3 space-y-3">
+                <div className="px-4 py-3 space-y-4">
+
                   {/* Teacher UUID */}
                   <div>
-                    <p className="text-[10px] font-bold text-[#8E8E93] mb-1">あなたの先生ID（招待URLのtidと一致するか確認）</p>
+                    <p className="text-[10px] font-bold text-[#8E8E93] mb-1">
+                      あなたの先生ID（招待URLの tid= と一致するか確認）
+                    </p>
                     <div className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-[#1C1C1E] flex-1 break-all">{teacherId}</span>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(teacherId)}
-                        className="text-[10px] text-[#007AFF] font-bold shrink-0">コピー</button>
+                      <span className="text-[10px] font-mono text-[#1C1C1E] flex-1 break-all leading-relaxed">{teacherId}</span>
+                      <button onClick={() => navigator.clipboard.writeText(teacherId)}
+                        className="text-[10px] text-[#007AFF] font-bold shrink-0 px-2 py-1 bg-[#007AFF]/10 rounded-lg">
+                        コピー
+                      </button>
                     </div>
                   </div>
 
-                  {/* Orphan students */}
+                  {/* All profiles in DB */}
                   <div>
-                    <p className="text-[10px] font-bold text-[#8E8E93] mb-1">
-                      迷子の生徒（teacher_id が未設定）{loadingOrphans && '— 読み込み中…'}
-                    </p>
-                    {orphans.length === 0 && !loadingOrphans ? (
-                      <p className="text-[11px] text-[#8E8E93]">迷子の生徒はいません</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {orphans.map(stu => (
-                          <div key={`${stu.nickname}-${stu.birthday}`}
-                            className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
-                            <span className="text-sm">{stu.type === 'princess' ? '👸' : '🧑'}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-[#1C1C1E]">{stu.nickname}</p>
-                              <p className="text-[10px] text-[#8E8E93]">{stu.birthday}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] font-bold text-[#8E8E93]">
+                        Supabase の全生徒データ（teacher_id の中身を確認）
+                      </p>
+                      <button
+                        onClick={() => { setShowAllProfiles(true); loadAllProfiles(); }}
+                        disabled={loadingAll}
+                        className="text-[10px] text-[#007AFF] font-bold px-2 py-1 bg-[#007AFF]/10 rounded-lg disabled:opacity-40">
+                        {loadingAll ? '読込中…' : '取得'}
+                      </button>
+                    </div>
+
+                    {showAllProfiles && (
+                      <div className="space-y-1.5">
+                        {allProfiles.length === 0 && !loadingAll && (
+                          <p className="text-[11px] text-[#8E8E93]">DBに生徒が1件もありません</p>
+                        )}
+                        {allProfiles.map(stu => {
+                          const isLinked = stu.teacher_id === teacherId;
+                          const isOrphan = !stu.teacher_id;
+                          return (
+                            <div key={`${stu.nickname}-${stu.birthday}`}
+                              className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
+                              <span className="text-base">{stu.type === 'princess' ? '👸' : '🧑'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-[#1C1C1E]">{stu.nickname}</p>
+                                <p className="text-[9px] font-mono break-all leading-tight"
+                                  style={{ color: isLinked ? '#34C759' : isOrphan ? '#FF9F0A' : '#FF3B30' }}>
+                                  {isLinked ? '✓ 紐付け済み' : isOrphan ? '⚠️ teacher_id = NULL（迷子）' : `⚠️ 他の先生 (${(stu.teacher_id ?? '').slice(0,8)}…)`}
+                                </p>
+                              </div>
+                              {(isOrphan || !isLinked) && (
+                                <button
+                                  onClick={() => handleLinkOrphan(stu)}
+                                  disabled={linkingId === `${stu.nickname}-${stu.birthday}`}
+                                  className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white shrink-0 active:opacity-70 disabled:opacity-40"
+                                  style={{ background: 'linear-gradient(135deg,#007AFF,#5856D6)' }}>
+                                  {linkingId === `${stu.nickname}-${stu.birthday}` ? '…' : '紐付ける'}
+                                </button>
+                              )}
                             </div>
-                            <button
-                              onClick={() => handleLinkOrphan(stu)}
-                              disabled={linkingId === `${stu.nickname}-${stu.birthday}`}
-                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white active:opacity-70 disabled:opacity-40"
-                              style={{ background: 'linear-gradient(135deg,#007AFF,#5856D6)' }}>
-                              {linkingId === `${stu.nickname}-${stu.birthday}` ? '…' : '紐付ける'}
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
+                        <p className="text-[9px] text-[#8E8E93] mt-1">
+                          ※「紐付ける」を押すと teacher_id をこの先生のIDに更新します
+                        </p>
                       </div>
                     )}
-                    <p className="text-[10px] text-[#8E8E93] mt-2">
-                      ※「紐付ける」を押すとこの先生に関連付けます（teacher_idカラムが必要）
-                    </p>
                   </div>
+
                 </div>
               </div>
             )}
 
-            {/* Error state */}
-            {studentsError && (
+            {/* SQL Migration warning */}
+            {sqlNeeded && (
+              <div className="bg-[#FF3B30]/8 border border-[#FF3B30]/25 rounded-2xl px-4 py-4 mb-2 space-y-2">
+                <p className="text-sm font-black text-[#FF3B30]">🚨 Supabase SQL の実行が必要です</p>
+                <p className="text-xs text-[#8E8E93]">
+                  teacher_id カラムが存在しません。Supabase の SQL Editor で以下を実行してください：
+                </p>
+                <div className="bg-[#1C1C1E] rounded-xl px-3 py-3 space-y-1">
+                  {[
+                    'ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;',
+                    'CREATE INDEX IF NOT EXISTS profiles_teacher_id_idx ON profiles(teacher_id);',
+                    'GRANT USAGE ON SCHEMA public TO anon, authenticated;',
+                    'GRANT ALL ON public.profiles TO anon, authenticated;',
+                    "DROP POLICY IF EXISTS \"public_all\" ON profiles;",
+                    "CREATE POLICY \"public_all\" ON profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);",
+                  ].map((sql, i) => (
+                    <p key={i} className="text-[10px] font-mono text-[#34C759] leading-relaxed break-all">{sql}</p>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    const sql = [
+                      'ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;',
+                      'CREATE INDEX IF NOT EXISTS profiles_teacher_id_idx ON profiles(teacher_id);',
+                      'GRANT USAGE ON SCHEMA public TO anon, authenticated;',
+                      'GRANT ALL ON public.profiles TO anon, authenticated;',
+                      'DROP POLICY IF EXISTS "public_all" ON profiles;',
+                      'CREATE POLICY "public_all" ON profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);',
+                    ].join('\n');
+                    navigator.clipboard.writeText(sql);
+                  }}
+                  className="w-full py-2 rounded-xl bg-[#FF3B30]/15 text-[#FF3B30] text-xs font-bold active:opacity-70">
+                  SQLをクリップボードにコピー
+                </button>
+              </div>
+            )}
+
+            {/* Generic error state */}
+            {studentsError && !sqlNeeded && (
               <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/20 rounded-2xl px-4 py-3 mb-2 space-y-1">
                 <p className="text-xs font-black text-[#FF3B30]">⚠️ データ取得エラー</p>
                 <p className="text-[11px] text-[#FF3B30]/80 font-mono break-all">{studentsError}</p>
-                <p className="text-[10px] text-[#8E8E93] mt-1">
-                  Supabase の profiles テーブルに teacher_id カラムが存在するか確認してください。
-                </p>
               </div>
             )}
 
