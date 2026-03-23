@@ -90,6 +90,10 @@ export default function TeacherPage() {
   const [loadingStudents,   setLoadingStudents]   = useState(true);
   const [studentsError,     setStudentsError]     = useState('');
   const [inviteUrlCopied,   setInviteUrlCopied]   = useState(false);
+  const [orphans,           setOrphans]           = useState<Profile[]>([]);
+  const [loadingOrphans,    setLoadingOrphans]    = useState(false);
+  const [showDebug,         setShowDebug]         = useState(false);
+  const [linkingId,         setLinkingId]         = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -113,13 +117,43 @@ export default function TeacherPage() {
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (error) {
-          console.error('[teacher] student fetch error:', error.message, error.details);
-          setStudentsError(error.message);
+          console.error('[teacher] student fetch error:', error.code, error.message);
+          setStudentsError(`[${error.code}] ${error.message}`);
         } else {
           setStudents((data as Profile[]) ?? []);
         }
         setLoadingStudents(false);
       });
+  };
+
+  const loadOrphans = () => {
+    if (!supabase) return;
+    setLoadingOrphans(true);
+    supabase.from('profiles')
+      .select('*')
+      .is('teacher_id', null)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) setOrphans((data as Profile[]) ?? []);
+        else console.error('[teacher] orphan fetch error:', error.message);
+        setLoadingOrphans(false);
+      });
+  };
+
+  const handleLinkOrphan = async (stu: Profile) => {
+    if (!supabase) return;
+    const key = `${stu.nickname}-${stu.birthday}`;
+    setLinkingId(key);
+    const { error } = await supabase.from('profiles')
+      .update({ teacher_id: teacherId })
+      .match({ nickname: stu.nickname, birthday: stu.birthday });
+    setLinkingId(null);
+    if (!error) {
+      setOrphans(prev => prev.filter(s => !(s.nickname === stu.nickname && s.birthday === stu.birthday)));
+      setStudents(prev => [{ ...stu, teacher_id: teacherId }, ...prev]);
+    } else {
+      console.error('[teacher] link failed:', error.message);
+    }
   };
 
   const reload = () => setSubs(getSubmissions());
@@ -278,8 +312,8 @@ export default function TeacherPage() {
               });
             }} />}
 
-            {/* Reload button */}
-            <div className="flex justify-end mb-2">
+            {/* Toolbar: reload + debug */}
+            <div className="flex justify-between items-center mb-2 gap-2">
               <button
                 onClick={() => loadStudents(teacherId)}
                 disabled={loadingStudents}
@@ -289,7 +323,66 @@ export default function TeacherPage() {
                 </svg>
                 再読み込み
               </button>
+              <button
+                onClick={() => { setShowDebug(v => !v); if (!showDebug) loadOrphans(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white shadow-sm text-xs font-semibold text-[#8E8E93] active:bg-[#F2F2F7] transition-all">
+                {showDebug ? '▲ 診断を閉じる' : '🔍 診断・迷子の生徒'}
+              </button>
             </div>
+
+            {/* Debug / orphan panel */}
+            {showDebug && (
+              <div className="mb-3 rounded-2xl overflow-hidden border border-[#FF9F0A]/30 bg-[#FF9F0A]/5">
+                <div className="px-4 py-3 border-b border-[#FF9F0A]/20">
+                  <p className="text-[11px] font-black tracking-widest text-[#FF9F0A] uppercase">診断パネル</p>
+                </div>
+                <div className="px-4 py-3 space-y-3">
+                  {/* Teacher UUID */}
+                  <div>
+                    <p className="text-[10px] font-bold text-[#8E8E93] mb-1">あなたの先生ID（招待URLのtidと一致するか確認）</p>
+                    <div className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-[#1C1C1E] flex-1 break-all">{teacherId}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(teacherId)}
+                        className="text-[10px] text-[#007AFF] font-bold shrink-0">コピー</button>
+                    </div>
+                  </div>
+
+                  {/* Orphan students */}
+                  <div>
+                    <p className="text-[10px] font-bold text-[#8E8E93] mb-1">
+                      迷子の生徒（teacher_id が未設定）{loadingOrphans && '— 読み込み中…'}
+                    </p>
+                    {orphans.length === 0 && !loadingOrphans ? (
+                      <p className="text-[11px] text-[#8E8E93]">迷子の生徒はいません</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {orphans.map(stu => (
+                          <div key={`${stu.nickname}-${stu.birthday}`}
+                            className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
+                            <span className="text-sm">{stu.type === 'princess' ? '👸' : '🧑'}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-[#1C1C1E]">{stu.nickname}</p>
+                              <p className="text-[10px] text-[#8E8E93]">{stu.birthday}</p>
+                            </div>
+                            <button
+                              onClick={() => handleLinkOrphan(stu)}
+                              disabled={linkingId === `${stu.nickname}-${stu.birthday}`}
+                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white active:opacity-70 disabled:opacity-40"
+                              style={{ background: 'linear-gradient(135deg,#007AFF,#5856D6)' }}>
+                              {linkingId === `${stu.nickname}-${stu.birthday}` ? '…' : '紐付ける'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-[#8E8E93] mt-2">
+                      ※「紐付ける」を押すとこの先生に関連付けます（teacher_idカラムが必要）
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Error state */}
             {studentsError && (

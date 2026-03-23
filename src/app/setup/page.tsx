@@ -26,6 +26,14 @@ export default function SetupPage() {
     const urlTid = new URLSearchParams(window.location.search).get('tid') ?? '';
     const resolvedTid = teacherId || urlTid || undefined;
 
+    console.log('[setup] registration start', {
+      nickname: nickname.trim(),
+      resolvedTid,
+      teacherIdState: teacherId,
+      urlTid,
+      fullUrl: window.location.href,
+    });
+
     const p = {
       nickname:   nickname.trim(),
       birthday,
@@ -37,7 +45,13 @@ export default function SetupPage() {
 
     // Supabase保存（非同期・失敗してもローカルは保存済みなので登録は完了とする）
     saveProfileToSupabase(p).then(saveErr => {
-      if (saveErr) console.warn('[setup] Supabase sync failed (local save OK):', saveErr);
+      if (saveErr) {
+        console.error('[setup] Supabase sync failed:', saveErr,
+          '\n→ teacher_id カラムが未作成の可能性があります。Supabase SQL Editor で以下を実行:\n' +
+          'ALTER TABLE profiles ADD COLUMN IF NOT EXISTS teacher_id text;');
+      } else {
+        console.log('[setup] Supabase sync OK ✓ teacher_id=', resolvedTid);
+      }
     });
 
     setSavedName(nickname.trim());
