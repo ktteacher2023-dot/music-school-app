@@ -41,7 +41,6 @@ const MS_KEY          = 'monster_state_v2'; // v2: new fields
 const LAST_ATTACK_KEY  = 'last_attack_date';
 const MUSIC_GAME_KEY   = 'music_quiz_last_played';
 const MELODY_GAME_KEY  = 'melody_quiz_last_played';
-const ROLE_KEY         = 'app_role';
 
 function loadMS(): MonsterState {
   if (typeof window === 'undefined') return INIT;
@@ -1585,8 +1584,6 @@ export default function StudentPage() {
     if (url) setAvatarUrl(url);
   };
 
-  const handleLogout = () => { localStorage.removeItem(ROLE_KEY); router.push('/'); };
-
   const handleAttackWithInk = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!canAttack || submitting) return;
     if (!isPrincess) {
@@ -1700,14 +1697,6 @@ export default function StudentPage() {
               <span className="text-xs">{theme.coinEmoji}</span>
               <span className="text-xs font-black" style={{ color: theme.coinColor }}>{ms.coins}</span>
             </div>
-            <button onClick={handleLogout}
-              className="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
-              style={{ background: isPrincess ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke={isPrincess ? '#9B4DCA' : 'rgba(255,255,255,0.5)'} strokeWidth="2" strokeLinecap="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-              </svg>
-            </button>
           </div>
         </div>
       </header>
