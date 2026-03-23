@@ -61,25 +61,28 @@ import { supabase } from './supabase';
 export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Promise<string | null> {
   if (!supabase) return 'Supabase が設定されていません';
 
-  // まず teacher_id を含めて保存を試みる
-  const { error } = await supabase.from('profiles').insert({
+  // id は Supabase 側で gen_random_uuid() により自動生成されるため送らない
+  // 送るのは nickname / birthday / type / teacher_id の4フィールドのみ
+  const payload: Record<string, string | null> = {
     nickname:   p.nickname,
     birthday:   p.birthday,
     type:       p.type,
     teacher_id: p.teacher_id ?? null,
-  });
+  };
+
+  const { error } = await supabase.from('profiles').insert(payload);
 
   if (!error) return null; // 成功
 
   // エラー詳細をコンソールに出力（原因特定用）
-  console.error('[supabase] profile INSERT failed', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+  console.error('[supabase] profile INSERT failed', {
+    code: error.code, message: error.message,
+    details: error.details, hint: error.hint,
+  });
 
-  const errStr = [
-    `code: ${error.code}`,
-    `message: ${error.message}`,
-    error.details ? `details: ${error.details}` : '',
-    error.hint    ? `hint: ${error.hint}`        : '',
-  ].filter(Boolean).join(' | ');
+  const toErrStr = (e: { code: string; message: string; details?: string | null; hint?: string | null }) =>
+    [`code: ${e.code}`, `message: ${e.message}`, e.details ? `details: ${e.details}` : '', e.hint ? `hint: ${e.hint}` : '']
+      .filter(Boolean).join(' | ');
 
   // teacher_id カラムが存在しない場合 (code=42703) → カラムなしで再試行
   if (error.code === '42703') {
@@ -89,16 +92,10 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
       birthday: p.birthday,
       type:     p.type,
     });
-    if (!err2) return null; // フォールバックで成功
-    const err2Str = [
-      `code: ${err2.code}`,
-      `message: ${err2.message}`,
-      err2.details ? `details: ${err2.details}` : '',
-      err2.hint    ? `hint: ${err2.hint}`        : '',
-    ].filter(Boolean).join(' | ');
-    console.error('[supabase] fallback INSERT also failed:', err2Str);
-    return err2Str;
+    if (!err2) return null;
+    console.error('[supabase] fallback INSERT also failed:', toErrStr(err2));
+    return toErrStr(err2);
   }
 
-  return errStr;
+  return toErrStr(error);
 }
