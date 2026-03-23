@@ -29,11 +29,15 @@ export default function SetupPage() {
 
     console.log('[setup] registration start — teacher_id:', resolvedTid ?? '(なし)', '| url:', window.location.href);
 
+    // キャラクタータイプ別のデフォルトアバター（自分でアップロードするまではこれを使う）
+    const defaultAvatar = charType === 'princess' ? '/avatar-princess.svg' : '/avatar-knight.svg';
+
     const p = {
       nickname:   nickname.trim(),
       birthday,
       type:       charType,
       teacher_id: resolvedTid,
+      avatar_url: defaultAvatar,
     };
     saveProfile(p);
     localStorage.setItem('app_role', 'student');

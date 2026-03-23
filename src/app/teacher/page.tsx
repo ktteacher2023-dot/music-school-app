@@ -405,7 +405,7 @@ export default function TeacherPage() {
                           return (
                             <div key={`${stu.nickname}-${stu.birthday}`}
                               className="bg-white rounded-xl px-3 py-2 flex items-center gap-2">
-                              <span className="text-base">{stu.type === 'princess' ? '👸' : '🧑'}</span>
+                              <img src={stu.avatar_url || (stu.type === 'princess' ? '/avatar-princess.svg' : '/avatar-knight.svg')} alt={stu.nickname} className="w-7 h-7 rounded-lg object-cover shrink-0"/>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-[#1C1C1E]">{stu.nickname}</p>
                                 <p className="text-[9px] font-mono break-all leading-tight"
@@ -528,13 +528,12 @@ export default function TeacherPage() {
                         <div className="px-4 py-3 flex items-center gap-3">
                           <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden shadow-sm"
                             style={{ background: `linear-gradient(135deg,${stuCur.from},${stuCur.to})` }}>
-                            {stu.avatar_url ? (
-                              <img src={stu.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xl">
-                                {stu.type === 'princess' ? '👸' : '🧑'}
-                              </div>
-                            )}
+                            <img
+                              src={stu.avatar_url || (stu.type === 'princess' ? '/avatar-princess.svg' : '/avatar-knight.svg')}
+                              alt={stu.nickname}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).src = stu.type === 'princess' ? '/avatar-princess.svg' : '/avatar-knight.svg'; }}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">

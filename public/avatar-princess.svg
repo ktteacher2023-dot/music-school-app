@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+  <rect width="60" height="60" rx="16" fill="url(#pg)"/>
+  <defs>
+    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF2D87"/>
+      <stop offset="100%" stop-color="#AF52DE"/>
+    </linearGradient>
+  </defs>
+  <!-- crown base -->
+  <rect x="17" y="34" width="26" height="7" rx="3" fill="white" opacity="0.9"/>
+  <!-- crown peaks -->
+  <polygon points="17,34 17,22 23,28 30,18 37,28 43,22 43,34" fill="white" opacity="0.9"/>
+  <!-- gems -->
+  <circle cx="30" cy="24" r="3" fill="#FF9F0A"/>
+  <circle cx="21" cy="30" r="2" fill="#34C759"/>
+  <circle cx="39" cy="30" r="2" fill="#007AFF"/>
+</svg>

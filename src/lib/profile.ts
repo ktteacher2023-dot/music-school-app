@@ -62,12 +62,12 @@ export async function saveProfileToSupabase(p: Omit<Profile, 'createdAt'>): Prom
   if (!supabase) return 'Supabase が設定されていません';
 
   // id は Supabase 側で gen_random_uuid() により自動生成されるため送らない
-  // 送るのは nickname / birthday / type / teacher_id の4フィールドのみ
   const payload: Record<string, string | null> = {
     nickname:   p.nickname,
     birthday:   p.birthday,
     type:       p.type,
-    teacher_id: p.teacher_id ?? null,
+    teacher_id: p.teacher_id  ?? null,
+    avatar_url: p.avatar_url  ?? null,
   };
 
   const { error } = await supabase.from('profiles').insert(payload);
