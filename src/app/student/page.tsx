@@ -1641,7 +1641,17 @@ export default function StudentPage() {
         <p className="text-white font-bold text-xl">まだ登録されていません</p>
         <p className="text-[#8E8E93] text-sm text-center">招待URLからアカウントを作成してください</p>
         <button
-          onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+          onClick={() => {
+            // 先生の固有ID・パスコードは残して、それ以外をリセット
+            const keep: Record<string, string> = {};
+            ['teacher_uuid', 'teacher_password'].forEach(k => {
+              const v = localStorage.getItem(k);
+              if (v !== null) keep[k] = v;
+            });
+            localStorage.clear();
+            Object.entries(keep).forEach(([k, v]) => localStorage.setItem(k, v));
+            window.location.href = '/';
+          }}
           className="mt-4 bg-[#FF3B30] text-white font-semibold px-6 py-3 rounded-2xl active:opacity-70"
         >
           データをリセットしてトップへ
@@ -2612,6 +2622,19 @@ export default function StudentPage() {
                   </p>
                 </div>
                 <div className="px-4 py-4 space-y-2">
+                  {/* モード切替：記録やプロフィールはそのまま、トップの選択画面へ戻る */}
+                  <button
+                    onClick={() => { localStorage.removeItem('app_role'); window.location.href = '/'; }}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-opacity active:opacity-70"
+                    style={{ background: isPrincess ? 'rgba(52,199,89,0.08)' : 'rgba(52,199,89,0.1)', color: '#34C759', border: '1px solid rgba(52,199,89,0.25)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 1l4 4-4 4"/>
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <path d="M7 23l-4-4 4-4"/>
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                    モードをきりかえる（せんせい用など）
+                  </button>
                   {/* パスワード変更 */}
                   <button
                     onClick={() => setShowPasswordModal(true)}

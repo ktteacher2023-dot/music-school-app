@@ -67,7 +67,13 @@ const tabs = [
 export default function BottomNav() {
   const pathname = usePathname();
 
-  if (pathname === '/' || pathname.startsWith('/teacher')) return null;
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/teacher') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/setup') ||
+    pathname.startsWith('/logout-secret')
+  ) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-[#C6C6C8]/60"

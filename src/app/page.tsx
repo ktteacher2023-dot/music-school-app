@@ -40,6 +40,8 @@ export default function RoleSelectPage() {
   const [pin, setPin]           = useState('');
   const [error, setError]       = useState('');
   const [shake, setShake]       = useState(false);
+  // この端末に登録済みの生徒プロフィール（あれば再ログイン不要で続きから）
+  const [savedNickname, setSavedNickname] = useState<string | null>(null);
 
   // 前回選んだロールがあれば自動リダイレクト
   useEffect(() => {
@@ -52,8 +54,42 @@ export default function RoleSelectPage() {
     }
     // Clear stale student role that has no matching profile
     if (saved === 'student' && !profile) localStorage.removeItem(ROLE_KEY);
-    if (saved === 'teacher') router.replace('/teacher');
+    if (saved === 'teacher') {
+      router.replace('/teacher');
+      return;
+    }
+    // ロール未選択でもプロフィールが残っていれば「〇〇さんでつづける」を表示
+    if (profile) {
+      try {
+        const p = JSON.parse(profile);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 初回マウント時のlocalStorage読み込みのため
+        if (p?.nickname) setSavedNickname(p.nickname);
+      } catch { /* ignore */ }
+    }
   }, [router]);
+
+  // 生徒モードへ入る：プロフィールが残っていれば再ログイン不要
+  const enterStudent = () => {
+    if (savedNickname) {
+      localStorage.setItem(ROLE_KEY, 'student');
+      router.push('/student');
+    } else {
+      router.push('/login');
+    }
+  };
+
+  // トラブル時リセット：先生の固有ID・パスコードは絶対に消さない
+  const safeReset = () => {
+    const PRESERVE = ['teacher_uuid', 'teacher_password'];
+    const keep: Record<string, string> = {};
+    PRESERVE.forEach(k => {
+      const v = localStorage.getItem(k);
+      if (v !== null) keep[k] = v;
+    });
+    localStorage.clear();
+    Object.entries(keep).forEach(([k, v]) => localStorage.setItem(k, v));
+    window.location.reload();
+  };
 
   // PIN 入力処理
   const handleKey = useCallback((key: string) => {
@@ -125,7 +161,7 @@ export default function RoleSelectPage() {
 
           {/* Student */}
           <button
-            onClick={() => { router.push('/login'); }}
+            onClick={enterStudent}
             className="w-full bg-white rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm active:scale-[0.98] active:bg-[#F2F2F7] transition-all text-left"
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
@@ -133,8 +169,12 @@ export default function RoleSelectPage() {
               <span className="text-2xl">🎵</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-[#1C1C1E] text-base">生徒としてログイン</p>
-              <p className="text-xs text-[#6C6C70] mt-0.5">練習を記録してモンスターを倒そう！</p>
+              <p className="font-bold text-[#1C1C1E] text-base">
+                {savedNickname ? `${savedNickname} さんでつづける` : '生徒としてログイン'}
+              </p>
+              <p className="text-xs text-[#6C6C70] mt-0.5">
+                {savedNickname ? 'タップしてすぐに練習をはじめよう！' : '練習を記録してモンスターを倒そう！'}
+              </p>
             </div>
             <svg width="9" height="15" viewBox="0 0 9 15" fill="none" stroke="#C7C7CC" strokeWidth="2.5" strokeLinecap="round">
               <path d="M1.5 1.5l6 6-6 6" />
@@ -165,7 +205,7 @@ export default function RoleSelectPage() {
 
         {/* Session reset — hidden at bottom for troubleshooting */}
         <button
-          onClick={() => { localStorage.clear(); window.location.reload(); }}
+          onClick={safeReset}
           className="mt-8 text-xs text-[#3A3A3C] underline active:text-[#8E8E93]"
         >
           セッションをリセット（不具合時）

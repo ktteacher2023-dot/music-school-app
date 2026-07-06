@@ -103,6 +103,12 @@ export default function TeacherPage() {
   const [latestSubs, setLatestSubs] = useState<Record<string, import('@/types').Submission>>({});
 
   useEffect(() => {
+    // ── ガード：PINを通って先生モードになっていなければトップへ戻す ──
+    // （URL直打ちで生徒・保護者が先生画面に入るのを防ぐ）
+    if (localStorage.getItem(ROLE_KEY) !== 'teacher') {
+      router.replace('/');
+      return;
+    }
     setMounted(true);
     setSubs(getSubmissions());
     setStats(loadMS());
