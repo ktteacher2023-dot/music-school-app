@@ -1769,6 +1769,321 @@ export default function StudentPage() {
       <div className="relative z-10 px-4 pt-4 space-y-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
 
+        {/* Attack panel */}
+        {mounted && alreadyAttackedToday ? (
+          <div className="rounded-2xl px-5 py-7 flex flex-col items-center gap-3 text-center"
+            style={isPrincess ? {
+              background: 'rgba(255,240,255,0.80)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(199,125,255,0.25)',
+              boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
+            } : {
+              background: 'rgba(3,6,18,0.97)',
+              border: '1px solid rgba(255,180,0,0.3)',
+              boxShadow: '0 4px 32px rgba(0,0,0,0.6)',
+            }}>
+            <span className="text-5xl" style={{ filter:'drop-shadow(0 0 16px rgba(150,100,255,0.5))' }}>
+              {isPrincess ? '🌸' : '🌙'}
+            </span>
+            <p className="font-black text-base" style={{ color: isPrincess ? '#6a0080' : '#ffffff' }}>
+              今日の練習は完了しました！
+            </p>
+            <p className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
+              {theme.completedNextMsg}
+            </p>
+            {/* Game buttons / already-played messages — unified logic */}
+            {gamePlayedToday && melodyPlayedToday ? (
+              /* ── 両方プレイ済み: 1つのメッセージに統合 ── */
+              <div className="w-full rounded-2xl py-4 px-4 text-center"
+                style={{
+                  background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
+                  border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
+                }}>
+                <p className="text-sm font-black mb-1" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
+                  {isPrincess
+                    ? '✨ 今日の魔法は使い果たしたわ！'
+                    : '🦑 今日の修行は完了だ！'}
+                </p>
+                <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
+                  {isPrincess
+                    ? 'また明日一緒に挑戦しようね ✦'
+                    : '明日のためにインクを貯めておけよ！'}
+                </p>
+              </div>
+            ) : (
+              /* ── 未プレイのゲームがある: 個別に表示 ── */
+              <>
+                {gamePlayedToday ? (
+                  <p className="text-xs text-center"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                    {isPrincess ? '🎼 音楽パズル: 今日は挑戦済み ✓' : '🎵 音撃クイズ: 今日は挑戦済み ✓'}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowMusicGame(true)}
+                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                    style={{
+                      background: isPrincess
+                        ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
+                        : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
+                      boxShadow: isPrincess
+                        ? '0 4px 20px rgba(199,125,255,0.5)'
+                        : '0 4px 20px rgba(255,107,0,0.6)',
+                      border: 'none', cursor: 'pointer',
+                      animation: 'floatBounce 3s ease-in-out infinite',
+                    }}>
+                    {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
+                  </button>
+                )}
+
+                {melodyPlayedToday ? (
+                  <p className="text-xs text-center"
+                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                    {isPrincess ? '🎵 メロディ魔法: 今日は挑戦済み ✓' : '🎼 メロディ音撃: 今日は挑戦済み ✓'}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setShowMelodyGame(true)}
+                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
+                    style={{
+                      background: isPrincess
+                        ? 'linear-gradient(135deg,#9B59B6,#FF6B9D)'
+                        : 'linear-gradient(135deg,#0066FF,#00C6FF)',
+                      boxShadow: isPrincess
+                        ? '0 4px 20px rgba(155,89,182,0.5)'
+                        : '0 4px 20px rgba(0,102,255,0.5)',
+                      border: 'none', cursor: 'pointer',
+                      animation: 'floatBounce 3s ease-in-out infinite',
+                    }}>
+                    {isPrincess ? '🎵 メロディ魔法パズルに挑戦！' : '🎼 メロディ音撃バトルに挑戦！'}
+                  </button>
+                )}
+              </>
+            )}
+
+            {ms.streak >= 3 && (
+              <div className="mt-1 px-5 py-2 rounded-2xl"
+                style={{
+                  background: ms.streak>=7
+                    ? 'linear-gradient(90deg,#FF3B30,#FF9F0A)'
+                    : isPrincess ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)' : '#FF9F0A',
+                  boxShadow: '0 2px 12px rgba(255,100,0,0.35)',
+                }}>
+                <p className="text-white font-black text-sm">🔥 {ms.streak}日連続継続中！</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden"
+            style={isPrincess ? {
+              background: 'rgba(255,240,255,0.82)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(199,125,255,0.25)',
+              boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
+            } : {
+              background: 'rgba(14,22,40,0.92)',
+              border: '1px solid rgba(255,180,0,0.15)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+            }}>
+            <div className="px-4 pt-4 pb-3 space-y-3">
+              {/* Streak banner */}
+              {streakLbl && (
+                <div className="rounded-xl px-3 py-2 flex items-center gap-2"
+                  style={{
+                    background: ms.streak>=7
+                      ? 'linear-gradient(90deg,#FF3B30,#FF9F0A)'
+                      : isPrincess ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)' : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
+                    boxShadow: '0 2px 12px rgba(255,80,0,0.35)',
+                  }}>
+                  <span className="text-white font-black text-sm">{streakLbl}</span>
+                  <span className="text-white/70 text-xs ml-auto">ダメージ ×{mult}</span>
+                </div>
+              )}
+
+              <p className="text-xs font-black tracking-[0.18em] uppercase"
+                style={{ color: isPrincess ? '#C77DFF' : 'rgba(255,200,100,0.7)' }}>
+                {theme.arenaLabel}
+              </p>
+
+              <input type="text" placeholder="曲名を入力..." value={song}
+                onChange={(e)=>setSong(e.target.value)}
+                className="w-full rounded-xl px-3 py-2.5 outline-none text-base font-medium"
+                style={isPrincess ? {
+                  background: 'rgba(240,220,255,0.5)',
+                  border: '1px solid rgba(199,125,255,0.3)',
+                  color: '#3d004d',
+                } : {
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                }}/>
+
+              <div className="flex gap-2">
+                <div className="flex-1 rounded-xl px-3 py-2.5 flex items-center gap-1"
+                  style={isPrincess ? {
+                    background: 'rgba(240,220,255,0.5)',
+                    border: '1px solid rgba(199,125,255,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}>
+                  <input type="number" inputMode="numeric" placeholder="0" min="1" max="999"
+                    value={mins} onChange={(e)=>setMins(e.target.value)}
+                    className="w-full font-bold outline-none bg-transparent text-base"
+                    style={{ color: isPrincess ? '#3d004d' : 'white' }}/>
+                  <span className="text-sm shrink-0 font-semibold"
+                    style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.4)' }}>分</span>
+                </div>
+                <div className="flex-1 rounded-xl px-2 py-2.5 flex items-center justify-center"
+                  style={isPrincess ? {
+                    background: 'rgba(240,220,255,0.5)',
+                    border: '1px solid rgba(199,125,255,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}>
+                  <StarRating value={rating} onChange={setRating} size="sm"/>
+                </div>
+              </div>
+
+              {/* Video attachment */}
+              <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoSelect} className="hidden"/>
+              {videoFile ? (
+                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  style={isPrincess ? {
+                    background: 'rgba(52,199,89,0.1)',
+                    border: '1px solid rgba(52,199,89,0.3)',
+                  } : {
+                    background: 'rgba(52,199,89,0.08)',
+                    border: '1px solid rgba(52,199,89,0.25)',
+                  }}>
+                  <div className="w-8 h-8 rounded-lg bg-[#34C759]/20 flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2" strokeLinecap="round">
+                      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: isPrincess ? '#1a0024' : 'white' }}>
+                      {videoFile.name}
+                    </p>
+                    <p className="text-xs" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.4)' }}>
+                      {fmtSize(videoFile.size)}
+                    </p>
+                  </div>
+                  <button onClick={()=>setVideoFile(null)}
+                    className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ background: isPrincess ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                      stroke={isPrincess ? '#9B4DCA' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={()=>videoInputRef.current?.click()}
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 active:opacity-70 transition-opacity"
+                  style={isPrincess ? {
+                    background: 'rgba(240,220,255,0.4)',
+                    border: '1px solid rgba(199,125,255,0.2)',
+                  } : {
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(0,122,255,0.15)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke={isPrincess ? '#C77DFF' : '#007AFF'} strokeWidth="2" strokeLinecap="round">
+                      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                    </svg>
+                  </div>
+                  <span className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
+                    動画を添付する（任意）
+                  </span>
+                </button>
+              )}
+
+              {previewDmg > 0 && (
+                <div className="text-center py-1">
+                  <span className="text-xs" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
+                    {theme.previewLabel}
+                  </span>
+                  <span className="font-black text-sm ml-1" style={{ color: isPrincess ? '#FF6B9D' : '#FFD700' }}>
+                    {previewDmg}
+                  </span>
+                  {mult > 1 && (
+                    <span className="font-bold text-xs ml-1" style={{ color: '#FF9F0A' }}>
+                      （×{mult} コンボ中！）
+                    </span>
+                  )}
+                  {previewDmg >= ms.hp && ms.hp > 0 && (
+                    <span className="font-black text-xs ml-1" style={{ color: '#FF9F0A' }}>
+                      {theme.finisherLabel}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <button onClick={handleAttackWithInk} disabled={!canAttack || submitting}
+              className="w-full py-4 text-base font-black tracking-widest relative overflow-hidden transition-all active:scale-[0.97]"
+              style={canAttack && !submitting ? {
+                background: isPrincess
+                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
+                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
+                color: 'white',
+                boxShadow: isPrincess
+                  ? '0 -1px 0 rgba(0,0,0,0.08), 0 2px 20px rgba(255,107,157,0.5)'
+                  : '0 -1px 0 rgba(0,0,0,0.3), 0 2px 20px rgba(255,59,48,0.4)',
+                letterSpacing: '0.12em',
+              } : submitting ? {
+                background: isPrincess
+                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
+                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
+                color: 'white',
+                opacity: 0.7,
+                letterSpacing: '0.12em',
+              } : {
+                background: isPrincess ? 'rgba(220,180,255,0.2)' : 'rgba(255,255,255,0.05)',
+                color: isPrincess ? 'rgba(180,100,240,0.3)' : 'rgba(255,255,255,0.2)',
+              }}>
+              {/* Ink spread ripple (knight only) */}
+              {inkPos && !isPrincess && (
+                <span className="absolute rounded-full pointer-events-none"
+                  style={{
+                    width: 56, height: 56,
+                    top: inkPos.y - 28, left: inkPos.x - 28,
+                    background: 'rgba(255,200,0,0.35)',
+                    animation: 'inkSpread 0.7s ease-out forwards',
+                  }}/>
+              )}
+              <span className="relative flex items-center justify-center gap-2">
+                {submitting ? (
+                  <>
+                    <span style={{ animation: 'spin 0.8s linear infinite', display: 'inline-block' }}>⏳</span>
+                    {isPrincess ? '✨ 送信中…' : '🚀 送信中…'}
+                  </>
+                ) : (
+                  <>
+                    {isPrincess ? <MagicWandIcon/> : <PaintRollerIcon/>}
+                    {streakLbl ? theme.attackStreakLabel(streakLbl) : videoFile ? theme.attackVideoLabel : theme.attackLabel}
+                  </>
+                )}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* ── Teacher message card ── */}
+        {mounted && teacherNote && (
+          <TeacherMessageCard
+            note={teacherNote}
+            isNew={noteIsNew}
+            teacherAvatar={teacherAvatarUrl}
+            isPrincess={isPrincess}
+            teacherName={teacherName}
+          />
+        )}
+
         {/* ── Name plate ── */}
         {mounted && nickname && (
           <NamePlate
@@ -1782,17 +2097,6 @@ export default function StudentPage() {
             charType={charType}
             avatarUrl={avatarUrl}
             onAvatarUpload={handleAvatarUpload}
-          />
-        )}
-
-        {/* ── Teacher message card ── */}
-        {mounted && teacherNote && (
-          <TeacherMessageCard
-            note={teacherNote}
-            isNew={noteIsNew}
-            teacherAvatar={teacherAvatarUrl}
-            isPrincess={isPrincess}
-            teacherName={teacherName}
           />
         )}
 
@@ -2111,310 +2415,6 @@ export default function StudentPage() {
             </div>
           );
         })()}
-
-        {/* Attack panel */}
-        {mounted && alreadyAttackedToday ? (
-          <div className="rounded-2xl px-5 py-7 flex flex-col items-center gap-3 text-center"
-            style={isPrincess ? {
-              background: 'rgba(255,240,255,0.80)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(199,125,255,0.25)',
-              boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
-            } : {
-              background: 'rgba(3,6,18,0.97)',
-              border: '1px solid rgba(255,180,0,0.3)',
-              boxShadow: '0 4px 32px rgba(0,0,0,0.6)',
-            }}>
-            <span className="text-5xl" style={{ filter:'drop-shadow(0 0 16px rgba(150,100,255,0.5))' }}>
-              {isPrincess ? '🌸' : '🌙'}
-            </span>
-            <p className="font-black text-base" style={{ color: isPrincess ? '#6a0080' : '#ffffff' }}>
-              今日の練習は完了しました！
-            </p>
-            <p className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
-              {theme.completedNextMsg}
-            </p>
-            {/* Game buttons / already-played messages — unified logic */}
-            {gamePlayedToday && melodyPlayedToday ? (
-              /* ── 両方プレイ済み: 1つのメッセージに統合 ── */
-              <div className="w-full rounded-2xl py-4 px-4 text-center"
-                style={{
-                  background: isPrincess ? 'rgba(199,125,255,0.12)' : 'rgba(255,255,255,0.06)',
-                  border: isPrincess ? '1.5px solid rgba(199,125,255,0.3)' : '1.5px solid rgba(255,255,255,0.12)',
-                }}>
-                <p className="text-sm font-black mb-1" style={{ color: isPrincess ? '#C77DFF' : '#FF9F0A' }}>
-                  {isPrincess
-                    ? '✨ 今日の魔法は使い果たしたわ！'
-                    : '🦑 今日の修行は完了だ！'}
-                </p>
-                <p className="text-xs" style={{ color: isPrincess ? 'rgba(90,0,110,0.6)' : 'rgba(255,255,255,0.4)' }}>
-                  {isPrincess
-                    ? 'また明日一緒に挑戦しようね ✦'
-                    : '明日のためにインクを貯めておけよ！'}
-                </p>
-              </div>
-            ) : (
-              /* ── 未プレイのゲームがある: 個別に表示 ── */
-              <>
-                {gamePlayedToday ? (
-                  <p className="text-xs text-center"
-                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
-                    {isPrincess ? '🎼 音楽パズル: 今日は挑戦済み ✓' : '🎵 音撃クイズ: 今日は挑戦済み ✓'}
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => setShowMusicGame(true)}
-                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
-                    style={{
-                      background: isPrincess
-                        ? 'linear-gradient(135deg,#FF6B9D,#C77DFF)'
-                        : 'linear-gradient(135deg,#FF6B00,#FF9F0A)',
-                      boxShadow: isPrincess
-                        ? '0 4px 20px rgba(199,125,255,0.5)'
-                        : '0 4px 20px rgba(255,107,0,0.6)',
-                      border: 'none', cursor: 'pointer',
-                      animation: 'floatBounce 3s ease-in-out infinite',
-                    }}>
-                    {isPrincess ? '🎼 音楽パズルに挑戦！' : '🎵 音撃クイズに挑戦！'}
-                  </button>
-                )}
-
-                {melodyPlayedToday ? (
-                  <p className="text-xs text-center"
-                    style={{ color: isPrincess ? 'rgba(199,125,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
-                    {isPrincess ? '🎵 メロディ魔法: 今日は挑戦済み ✓' : '🎼 メロディ音撃: 今日は挑戦済み ✓'}
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => setShowMelodyGame(true)}
-                    className="w-full rounded-2xl py-3.5 font-black text-base text-white"
-                    style={{
-                      background: isPrincess
-                        ? 'linear-gradient(135deg,#9B59B6,#FF6B9D)'
-                        : 'linear-gradient(135deg,#0066FF,#00C6FF)',
-                      boxShadow: isPrincess
-                        ? '0 4px 20px rgba(155,89,182,0.5)'
-                        : '0 4px 20px rgba(0,102,255,0.5)',
-                      border: 'none', cursor: 'pointer',
-                      animation: 'floatBounce 3s ease-in-out infinite',
-                    }}>
-                    {isPrincess ? '🎵 メロディ魔法パズルに挑戦！' : '🎼 メロディ音撃バトルに挑戦！'}
-                  </button>
-                )}
-              </>
-            )}
-
-            {ms.streak >= 3 && (
-              <div className="mt-1 px-5 py-2 rounded-2xl"
-                style={{
-                  background: ms.streak>=7
-                    ? 'linear-gradient(90deg,#FF3B30,#FF9F0A)'
-                    : isPrincess ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)' : '#FF9F0A',
-                  boxShadow: '0 2px 12px rgba(255,100,0,0.35)',
-                }}>
-                <p className="text-white font-black text-sm">🔥 {ms.streak}日連続継続中！</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden"
-            style={isPrincess ? {
-              background: 'rgba(255,240,255,0.82)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(199,125,255,0.25)',
-              boxShadow: '0 4px 24px rgba(199,125,255,0.15)',
-            } : {
-              background: 'rgba(14,22,40,0.92)',
-              border: '1px solid rgba(255,180,0,0.15)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-            }}>
-            <div className="px-4 pt-4 pb-3 space-y-3">
-              {/* Streak banner */}
-              {streakLbl && (
-                <div className="rounded-xl px-3 py-2 flex items-center gap-2"
-                  style={{
-                    background: ms.streak>=7
-                      ? 'linear-gradient(90deg,#FF3B30,#FF9F0A)'
-                      : isPrincess ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)' : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
-                    boxShadow: '0 2px 12px rgba(255,80,0,0.35)',
-                  }}>
-                  <span className="text-white font-black text-sm">{streakLbl}</span>
-                  <span className="text-white/70 text-xs ml-auto">ダメージ ×{mult}</span>
-                </div>
-              )}
-
-              <p className="text-xs font-black tracking-[0.18em] uppercase"
-                style={{ color: isPrincess ? '#C77DFF' : 'rgba(255,200,100,0.7)' }}>
-                {theme.arenaLabel}
-              </p>
-
-              <input type="text" placeholder="曲名を入力..." value={song}
-                onChange={(e)=>setSong(e.target.value)}
-                className="w-full rounded-xl px-3 py-2.5 outline-none text-base font-medium"
-                style={isPrincess ? {
-                  background: 'rgba(240,220,255,0.5)',
-                  border: '1px solid rgba(199,125,255,0.3)',
-                  color: '#3d004d',
-                } : {
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white',
-                }}/>
-
-              <div className="flex gap-2">
-                <div className="flex-1 rounded-xl px-3 py-2.5 flex items-center gap-1"
-                  style={isPrincess ? {
-                    background: 'rgba(240,220,255,0.5)',
-                    border: '1px solid rgba(199,125,255,0.3)',
-                  } : {
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}>
-                  <input type="number" inputMode="numeric" placeholder="0" min="1" max="999"
-                    value={mins} onChange={(e)=>setMins(e.target.value)}
-                    className="w-full font-bold outline-none bg-transparent text-base"
-                    style={{ color: isPrincess ? '#3d004d' : 'white' }}/>
-                  <span className="text-sm shrink-0 font-semibold"
-                    style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.4)' }}>分</span>
-                </div>
-                <div className="flex-1 rounded-xl px-2 py-2.5 flex items-center justify-center"
-                  style={isPrincess ? {
-                    background: 'rgba(240,220,255,0.5)',
-                    border: '1px solid rgba(199,125,255,0.3)',
-                  } : {
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}>
-                  <StarRating value={rating} onChange={setRating} size="sm"/>
-                </div>
-              </div>
-
-              {/* Video attachment */}
-              <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoSelect} className="hidden"/>
-              {videoFile ? (
-                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={isPrincess ? {
-                    background: 'rgba(52,199,89,0.1)',
-                    border: '1px solid rgba(52,199,89,0.3)',
-                  } : {
-                    background: 'rgba(52,199,89,0.08)',
-                    border: '1px solid rgba(52,199,89,0.25)',
-                  }}>
-                  <div className="w-8 h-8 rounded-lg bg-[#34C759]/20 flex items-center justify-center shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2" strokeLinecap="round">
-                      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: isPrincess ? '#1a0024' : 'white' }}>
-                      {videoFile.name}
-                    </p>
-                    <p className="text-xs" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.4)' }}>
-                      {fmtSize(videoFile.size)}
-                    </p>
-                  </div>
-                  <button onClick={()=>setVideoFile(null)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center"
-                    style={{ background: isPrincess ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-                      stroke={isPrincess ? '#9B4DCA' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
-              ) : (
-                <button onClick={()=>videoInputRef.current?.click()}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 active:opacity-70 transition-opacity"
-                  style={isPrincess ? {
-                    background: 'rgba(240,220,255,0.4)',
-                    border: '1px solid rgba(199,125,255,0.2)',
-                  } : {
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: isPrincess ? 'rgba(199,125,255,0.2)' : 'rgba(0,122,255,0.15)' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke={isPrincess ? '#C77DFF' : '#007AFF'} strokeWidth="2" strokeLinecap="round">
-                      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-                    </svg>
-                  </div>
-                  <span className="text-sm" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
-                    動画を添付する（任意）
-                  </span>
-                </button>
-              )}
-
-              {previewDmg > 0 && (
-                <div className="text-center py-1">
-                  <span className="text-xs" style={{ color: isPrincess ? '#B06CC0' : 'rgba(255,255,255,0.45)' }}>
-                    {theme.previewLabel}
-                  </span>
-                  <span className="font-black text-sm ml-1" style={{ color: isPrincess ? '#FF6B9D' : '#FFD700' }}>
-                    {previewDmg}
-                  </span>
-                  {mult > 1 && (
-                    <span className="font-bold text-xs ml-1" style={{ color: '#FF9F0A' }}>
-                      （×{mult} コンボ中！）
-                    </span>
-                  )}
-                  {previewDmg >= ms.hp && ms.hp > 0 && (
-                    <span className="font-black text-xs ml-1" style={{ color: '#FF9F0A' }}>
-                      {theme.finisherLabel}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <button onClick={handleAttackWithInk} disabled={!canAttack || submitting}
-              className="w-full py-4 text-base font-black tracking-widest relative overflow-hidden transition-all active:scale-[0.97]"
-              style={canAttack && !submitting ? {
-                background: isPrincess
-                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
-                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
-                color: 'white',
-                boxShadow: isPrincess
-                  ? '0 -1px 0 rgba(0,0,0,0.08), 0 2px 20px rgba(255,107,157,0.5)'
-                  : '0 -1px 0 rgba(0,0,0,0.3), 0 2px 20px rgba(255,59,48,0.4)',
-                letterSpacing: '0.12em',
-              } : submitting ? {
-                background: isPrincess
-                  ? 'linear-gradient(90deg,#FF6B9D,#C77DFF)'
-                  : 'linear-gradient(90deg,#FF3B30,#FF9F0A)',
-                color: 'white',
-                opacity: 0.7,
-                letterSpacing: '0.12em',
-              } : {
-                background: isPrincess ? 'rgba(220,180,255,0.2)' : 'rgba(255,255,255,0.05)',
-                color: isPrincess ? 'rgba(180,100,240,0.3)' : 'rgba(255,255,255,0.2)',
-              }}>
-              {/* Ink spread ripple (knight only) */}
-              {inkPos && !isPrincess && (
-                <span className="absolute rounded-full pointer-events-none"
-                  style={{
-                    width: 56, height: 56,
-                    top: inkPos.y - 28, left: inkPos.x - 28,
-                    background: 'rgba(255,200,0,0.35)',
-                    animation: 'inkSpread 0.7s ease-out forwards',
-                  }}/>
-              )}
-              <span className="relative flex items-center justify-center gap-2">
-                {submitting ? (
-                  <>
-                    <span style={{ animation: 'spin 0.8s linear infinite', display: 'inline-block' }}>⏳</span>
-                    {isPrincess ? '✨ 送信中…' : '🚀 送信中…'}
-                  </>
-                ) : (
-                  <>
-                    {isPrincess ? <MagicWandIcon/> : <PaintRollerIcon/>}
-                    {streakLbl ? theme.attackStreakLabel(streakLbl) : videoFile ? theme.attackVideoLabel : theme.attackLabel}
-                  </>
-                )}
-              </span>
-            </button>
-          </div>
-        )}
 
         {/* Today's log */}
         {mounted && records.length>0 && (
@@ -2795,7 +2795,7 @@ function DeleteAccountModal({ nickname, isPrincess, onConfirm, onClose }: {
               onChange={e => setInput(e.target.value)}
               placeholder={nickname}
               autoComplete="off"
-              className="w-full rounded-2xl px-4 py-3 text-sm font-bold outline-none text-center"
+              className="w-full rounded-2xl px-4 py-3 text-base font-bold outline-none text-center"
               style={{
                 background: cardBg,
                 border: input === nickname ? '1.5px solid #FF3B30' : cardBdr,
@@ -2903,11 +2903,12 @@ function PasswordChangeModal({ nickname, isPrincess, onClose }: {
               value={newPw}
               onChange={e => { setNewPw(e.target.value); setError(''); }}
               placeholder="新しいパスワード"
-              className="w-full rounded-xl px-4 py-3 text-sm outline-none pr-11"
+              className="w-full rounded-xl px-4 py-3 text-base outline-none pr-11"
               style={inputStyle}
             />
             <button onClick={() => setShowPw(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 active:opacity-100">
+              aria-label={showPw ? 'パスワードを隠す' : 'パスワードを表示'}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 opacity-50 active:opacity-100">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                 stroke={textPrimary} strokeWidth="2" strokeLinecap="round">
                 {showPw
@@ -2923,7 +2924,7 @@ function PasswordChangeModal({ nickname, isPrincess, onClose }: {
             value={confirm}
             onChange={e => { setConfirm(e.target.value); setError(''); }}
             placeholder="もう一度入力"
-            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            className="w-full rounded-xl px-4 py-3 text-base outline-none"
             style={inputStyle}
           />
 

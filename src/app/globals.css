@@ -197,3 +197,15 @@ input[type='number']::-webkit-outer-spin-button {
 .pixie-14 { animation: pd14 1.1s cubic-bezier(0,0,0.2,1) forwards; }
 .pixie-15 { animation: pd15 1.2s cubic-bezier(0,0,0.2,1) forwards; }
 .pixie-16 { animation: pd16 1.2s cubic-bezier(0,0,0.2,1) forwards; }
+
+/* ── アクセシビリティ：OSの「視差効果を減らす」設定を尊重 ──
+   演出アニメーション（常時ループ含む）を実質停止し、
+   酔いやすい子・保護者の端末でも安心して使えるようにする */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
